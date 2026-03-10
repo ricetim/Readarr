@@ -23,6 +23,8 @@ namespace NzbDrone.Core.Indexers.MyAnonamouse
             MinimumSeeders = IndexerDefaults.MINIMUM_SEEDERS;
         }
 
+        public string BaseUrl { get; set; } = "https://www.myanonamouse.net";
+
         [FieldDefinition(0, Label = "Session Cookie", Privacy = PrivacyLevel.ApiKey, HelpText = "Your mam_id cookie value from a logged-in browser session.")]
         public string Cookie { get; set; }
 

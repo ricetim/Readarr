@@ -24,7 +24,11 @@ namespace NzbDrone.Core.Indexers.MyAnonamouse
 
         public override IIndexerRequestGenerator GetRequestGenerator()
         {
-            return new MyAnonamouseRequestGenerator { Settings = Settings };
+            return new MyAnonamouseRequestGenerator
+            {
+                Settings = Settings,
+                LastRssSyncDate = _indexerStatusService.GetLastRssSyncReleaseInfo(Definition.Id)?.PublishDate
+            };
         }
 
         public override IParseIndexerResponse GetParser()

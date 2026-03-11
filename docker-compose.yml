@@ -1,0 +1,12 @@
+services:
+  readarr:
+    build: .
+    container_name: readarr
+    ports:
+      - "8787:8787"
+    volumes:
+      - readarr-config:/config
+    restart: unless-stopped
+
+volumes:
+  readarr-config:

@@ -154,3 +154,4 @@ _temp_*/**/*
 # API doc generation
 .config/
 .superpowers/
+.worktrees/

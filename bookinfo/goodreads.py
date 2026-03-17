@@ -514,13 +514,17 @@ class GoodreadsClient:
             if extracted_kca.startswith("kca://"):
                 author_kca = extracted_kca
 
-        # If author_name is unknown (e.g. KCA was cached, XML API unavailable),
-        # extract it from the contributor nodes in the GraphQL response.
-        if not author_name:
+        # If author_name or author_image_url is unknown (e.g. KCA was cached,
+        # XML API unavailable), extract from contributor nodes in the GraphQL response.
+        if not author_name or not author_image_url:
             for gql_book in book_results:
                 contrib_node = (gql_book.get("primaryContributorEdge") or {}).get("node") or {}
-                if contrib_node.get("legacyId") == author_id and contrib_node.get("name"):
-                    author_name = contrib_node["name"]
+                if contrib_node.get("legacyId") == author_id:
+                    if not author_name and contrib_node.get("name"):
+                        author_name = contrib_node["name"]
+                    if not author_image_url and contrib_node.get("profileImageUrl"):
+                        author_image_url = contrib_node["profileImageUrl"]
+                if author_name and author_image_url:
                     break
 
         works: list[dict] = []

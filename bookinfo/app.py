@@ -191,10 +191,8 @@ async def get_author(author_id: int, background_tasks: BackgroundTasks, kca: str
                 _pending_complete.pop(aid, None)
         except Exception as exc:
             logger.warning("Background completion failed for author %d: %s", author_id, exc)
-            return
         finally:
             _background_in_progress.discard(author_id)
-        await _notify_readarr(author_id)
 
     if first_page_next_token:
         partial["Partial"] = True

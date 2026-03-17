@@ -575,9 +575,11 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         private Author PollAuthorUncached(string foreignAuthorId)
         {
             var kca = _authorMetadataService.FindById(foreignAuthorId)?.Kca ?? string.Empty;
+            var pollStart = DateTime.UtcNow;
+            const int pollTimeoutSeconds = 300;
 
-            // Loop only retries on 429 (rate limited). bookinfo returns synchronously in the
-            // stateless design — any persistent error becomes a non-429 response and exits.
+            // Loop retries on 429 (rate limited) and on Partial=true responses while
+            // bookinfo paginates remaining works in the background.
             while (true)
             {
                 var httpRequest = _requestBuilder.GetRequestBuilder()
@@ -621,7 +623,16 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
                 if (resource.Partial)
                 {
-                    _logger.ProgressInfo("Fetching complete book list for {0} ({1} works so far, background pagination in progress)…", resource.Name, resource.Works.Count);
+                    var elapsed = (int)(DateTime.UtcNow - pollStart).TotalSeconds;
+                    if (elapsed >= pollTimeoutSeconds)
+                    {
+                        _logger.Warn("Timed out waiting for complete book list for {0} after {1}s, proceeding with {2} works", resource.Name, elapsed, resource.Works.Count);
+                        resource.Works = SanitizeWorks(resource.Works, _logger);
+                        resource.Series ??= new List<SeriesResource>();
+                        return MapAuthor(resource);
+                    }
+
+                    _logger.ProgressInfo("Fetching complete book list for {0} ({1} works so far, {2}s elapsed)…", resource.Name, resource.Works.Count, elapsed);
                     System.Threading.Thread.Sleep(3000);
                     continue;
                 }

@@ -575,6 +575,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         {
             var kca = _authorMetadataService.FindById(foreignAuthorId)?.Kca ?? string.Empty;
 
+            // Loop only retries on 429 (rate limited). bookinfo returns synchronously in the
+            // stateless design — any persistent error becomes a non-429 response and exits.
             while (true)
             {
                 var httpRequest = _requestBuilder.GetRequestBuilder()

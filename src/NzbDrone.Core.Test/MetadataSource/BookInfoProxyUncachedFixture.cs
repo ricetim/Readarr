@@ -45,7 +45,7 @@ namespace NzbDrone.Core.Test.MetadataSource
             }
 
             capturedRequest.Should().NotBeNull();
-            capturedRequest.Url.ToString().Should().Contain("kca=");
+            capturedRequest.Url.ToString().Should().Contain("kca=kca%3A%2F%2Fauthor%2Famzn1.gr.author.v1.Test");
         }
 
         [Test]

@@ -224,6 +224,14 @@ namespace NzbDrone.Core.MediaFiles
             var authors = _authorService.GetAuthors(authorIds);
             foreach (var author in authors)
             {
+                if (_configService.CreateEmptyAuthorFolders &&
+                    author.Path.IsNotNullOrWhiteSpace() &&
+                    !_diskProvider.FolderExists(author.Path))
+                {
+                    _logger.Debug("Creating missing author folder: {0}", author.Path);
+                    _diskProvider.CreateFolder(author.Path);
+                }
+
                 CompletedScanning(author);
             }
 

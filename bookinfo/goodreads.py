@@ -296,6 +296,8 @@ class GoodreadsClient:
         response.raise_for_status()
         payload = response.json()
         if "errors" in payload:
+            if all(e.get("errorType") == "RESOURCE_NOT_FOUND" for e in payload["errors"]):
+                raise LookupError("Author not found in Goodreads")
             raise RuntimeError(f"GraphQL errors: {payload['errors']}")
         return payload.get("data", {})
 
@@ -336,6 +338,8 @@ class GoodreadsClient:
         await self._rate_limiter.acquire()
         url = f"{XML_BASE}/author/show/{author_id}.xml?key={XML_KEY}"
         response = await self._client.get(url)
+        if response.status_code == 404:
+            return "", "", "", ""
         response.raise_for_status()
         try:
             root = ET.fromstring(response.text)

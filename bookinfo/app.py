@@ -145,13 +145,16 @@ async def get_author(author_id: int, background_tasks: BackgroundTasks, kca: str
             await goodreads_client.resolve_author_xml(author_id)
         )
 
-    partial, first_page_next_token = await goodreads_client.fetch_author_fast_path(
-        author_id=author_id,
-        author_name=author_name,
-        author_kca=kca,
-        author_image_url=author_image_url,
-        author_description=author_description,
-    )
+    try:
+        partial, first_page_next_token = await goodreads_client.fetch_author_fast_path(
+            author_id=author_id,
+            author_name=author_name,
+            author_kca=kca,
+            author_image_url=author_image_url,
+            author_description=author_description,
+        )
+    except LookupError:
+        raise HTTPException(status_code=404, detail=f"Author {author_id} not found in Goodreads")
 
     # If name is still empty, extract it from contributor data in works GraphQL response.
     if not partial.get("Name"):

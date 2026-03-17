@@ -69,7 +69,7 @@ namespace Readarr.Api.V1.Books
         {
             if (!authorId.HasValue && !bookIds.Any() && titleSlug.IsNullOrWhiteSpace())
             {
-                var editionTask = Task.Run(() => _editionService.GetAllMonitoredEditions());
+                var editionTask = Task.Run(() => _editionService.GetAllEditions());
                 var metadataTask = Task.Run(() => _authorService.GetAllAuthors());
                 var books = _bookService.GetAllBooks();
 

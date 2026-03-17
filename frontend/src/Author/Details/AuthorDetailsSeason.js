@@ -6,6 +6,7 @@ import TableBody from 'Components/Table/TableBody';
 import { sortDirections } from 'Helpers/Props';
 import hasDifferentItemsOrOrder from 'Utilities/Object/hasDifferentItemsOrOrder';
 import getToggledRange from 'Utilities/Table/getToggledRange';
+import { classifyBook } from './bookTypeUtils';
 import BookRowConnector from './BookRowConnector';
 import styles from './AuthorDetailsSeason.css';
 
@@ -78,6 +79,7 @@ class AuthorDetailsSeason extends Component {
   render() {
     const {
       items,
+      bookType,
       isEditorActive,
       columns,
       sortKey,
@@ -86,6 +88,13 @@ class AuthorDetailsSeason extends Component {
       onTableOptionChange,
       selectedState
     } = this.props;
+
+    const filteredItems = bookType
+      ? items.filter((book) => {
+          const { isEbook, isAudiobook } = classifyBook(book);
+          return bookType === 'ebook' ? isEbook : isAudiobook;
+        })
+      : items;
 
     let titleColumns = columns;
     if (!isEditorActive) {
@@ -106,7 +115,7 @@ class AuthorDetailsSeason extends Component {
           >
             <TableBody>
               {
-                items.map((item) => {
+                filteredItems.map((item) => {
                   return (
                     <BookRowConnector
                       key={item.id}
@@ -132,6 +141,7 @@ AuthorDetailsSeason.propTypes = {
   sortKey: PropTypes.string,
   sortDirection: PropTypes.oneOf(sortDirections.all),
   items: PropTypes.arrayOf(PropTypes.object).isRequired,
+  bookType: PropTypes.oneOf(['ebook', 'audiobook']),
   isEditorActive: PropTypes.bool.isRequired,
   selectedState: PropTypes.object.isRequired,
   columns: PropTypes.arrayOf(PropTypes.object).isRequired,

@@ -50,7 +50,8 @@ const selectBooks = createSelector(
       isSaving,
       saveError,
       isDeleting,
-      deleteError
+      deleteError,
+      bookItems: items
     };
   }
 );
@@ -126,7 +127,8 @@ function createMapStateToProps() {
         isSaving,
         saveError,
         isDeleting,
-        deleteError
+        deleteError,
+        bookItems
       } = books;
 
       const {
@@ -164,6 +166,10 @@ function createMapStateToProps() {
       const isFetching = isBooksFetching || isSeriesFetching || isBookFilesFetching;
       const isPopulated = isBooksPopulated && isSeriesPopulated && isBookFilesPopulated;
 
+      const authorBooks = bookItems.filter((b) => b.authorId === author.id);
+      const ebookCount = authorBooks.filter((b) => b.hasEbookEdition).length;
+      const audiobookCount = authorBooks.filter((b) => b.hasAudiobookEdition).length;
+
       const alternateTitles = _.reduce(author.alternateTitles, (acc, alternateTitle) => {
         if ((alternateTitle.seasonNumber === -1 || alternateTitle.seasonNumber === undefined) &&
             (alternateTitle.sceneSeasonNumber === -1 || alternateTitle.sceneSeasonNumber === undefined)) {
@@ -175,6 +181,11 @@ function createMapStateToProps() {
 
       return {
         ...author,
+        statistics: {
+          ...(author.statistics || {}),
+          ebookCount,
+          audiobookCount
+        },
         alternateTitles,
         isAuthorRefreshing,
         allAuthorRefreshing,

@@ -42,10 +42,23 @@ namespace Readarr.Api.V1.Books
         [JsonProperty(DefaultValueHandling = DefaultValueHandling.Ignore)]
         [SwaggerIgnore]
         public bool Grabbed { get; set; }
+
+        public bool HasEbookEdition { get; set; }
+        public bool HasAudiobookEdition { get; set; }
     }
 
     public static class BookResourceMapper
     {
+        private static readonly HashSet<string> EbookFormats = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Kindle Edition", "Nook", "ebook", "EPUB", "PDF"
+        };
+
+        private static readonly HashSet<string> AudiobookFormats = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "Audiobook", "Audio CD", "Audio Cassette", "Audible Audio", "CD-ROM", "MP3 CD"
+        };
+
         public static BookResource ToResource(this Book model)
         {
             if (model == null)
@@ -81,7 +94,11 @@ namespace Readarr.Api.V1.Books
                 Links = model.Links.Concat(selectedEdition?.Links ?? new List<Links>()).ToList(),
                 Ratings = selectedEdition?.Ratings ?? new Ratings(),
                 Added = model.Added,
-                LastSearchTime = model.LastSearchTime
+                LastSearchTime = model.LastSearchTime,
+                HasEbookEdition = model.Editions?.Value?.Any(e =>
+                    e.IsEbook || EbookFormats.Contains(e.Format ?? string.Empty)) ?? false,
+                HasAudiobookEdition = model.Editions?.Value?.Any(e =>
+                    AudiobookFormats.Contains(e.Format ?? string.Empty)) ?? false
             };
         }
 

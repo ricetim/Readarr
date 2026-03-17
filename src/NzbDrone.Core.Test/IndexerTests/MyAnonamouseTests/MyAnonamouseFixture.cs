@@ -39,7 +39,7 @@ namespace NzbDrone.Core.Test.IndexerTests.MyAnonamouseTests
             releases[0].Should().BeOfType<MyAnonamouseInfo>();
 
             var release = (MyAnonamouseInfo)releases[0];
-            release.Title.Should().Be("Love at Stake series");
+            release.Title.Should().Be("Kerrelyn Sparks - Love at Stake series [MP3]");
             release.Author.Should().Be("Kerrelyn Sparks");
             release.Guid.Should().Be("MAM-273200");
             release.DownloadUrl.Should().Be("https://www.myanonamouse.net/tor/download.php?tid=273200");
@@ -50,6 +50,34 @@ namespace NzbDrone.Core.Test.IndexerTests.MyAnonamouseTests
             release.PublishDate.Should().Be(new DateTime(2023, 4, 1, 12, 0, 0, DateTimeKind.Utc));
             release.DownloadProtocol.Should().Be(DownloadProtocol.Torrent);
             release.IndexerFlags.HasFlag(IndexerFlags.Freeleech).Should().BeTrue();
+        }
+
+        [Test]
+        public async Task should_return_empty_list_when_no_results_found()
+        {
+            var noResults = "{\"error\":\"Nothing returned, out of 0\"}";
+
+            Mocker.GetMock<IHttpClient>()
+                .Setup(o => o.ExecuteAsync(It.IsAny<HttpRequest>()))
+                .Returns<HttpRequest>(r => Task.FromResult(new HttpResponse(r, new HttpHeader { ContentType = "application/json" }, noResults)));
+
+            var releases = await Subject.FetchRecent();
+
+            releases.Should().BeEmpty();
+        }
+
+        [Test]
+        public void should_throw_on_auth_error()
+        {
+            var authError = "{\"error\":\"Invalid session\"}";
+            var request = new HttpRequest("https://www.myanonamouse.net/tor/js/loadSearchJSONbasic.php");
+            var httpResponse = new HttpResponse(request, new HttpHeader { ContentType = "application/json" }, authError);
+            var indexerResponse = new IndexerResponse(new IndexerRequest(request), httpResponse);
+
+            var parser = new MyAnonamouseParser();
+            Action act = () => parser.ParseResponse(indexerResponse);
+            act.Should().Throw<NzbDrone.Core.Indexers.Exceptions.IndexerException>()
+               .WithMessage("*Invalid session*");
         }
 
         [Test]
@@ -64,7 +92,7 @@ namespace NzbDrone.Core.Test.IndexerTests.MyAnonamouseTests
             var releases = await Subject.FetchRecent();
 
             var release = (MyAnonamouseInfo)releases[1];
-            release.Title.Should().Be("The Name of the Wind");
+            release.Title.Should().Be("Patrick Rothfuss - The Name of the Wind [EPUB]");
             release.Author.Should().Be("Patrick Rothfuss");
             release.Guid.Should().Be("MAM-310000");
             release.IndexerFlags.HasFlag(IndexerFlags.Freeleech).Should().BeFalse();

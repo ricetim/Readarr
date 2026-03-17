@@ -245,7 +245,9 @@ class AuthorDetails extends Component {
 
     const {
       bookFileCount = 0,
-      totalBookCount = 0
+      totalBookCount = 0,
+      ebookCount = 0,
+      audiobookCount = 0
     } = statistics;
 
     const {
@@ -436,7 +438,7 @@ class AuthorDetails extends Component {
 
             {
               isPopulated &&
-                <Tabs selectedIndex={this.state.tabIndex} onSelect={this.onTabSelect}>
+                <Tabs selectedIndex={this.state.selectedTabIndex} onSelect={this.onTabSelect}>
                   <TabList
                     className={styles.tabList}
                   >
@@ -444,7 +446,14 @@ class AuthorDetails extends Component {
                       className={styles.tab}
                       selectedClassName={styles.selectedTab}
                     >
-                      {translate('BooksTotal', [totalBookCount])}
+                      {`Ebooks (${ebookCount})`}
+                    </Tab>
+
+                    <Tab
+                      className={styles.tab}
+                      selectedClassName={styles.selectedTab}
+                    >
+                      {`Audiobooks (${audiobookCount})`}
                     </Tab>
 
                     <Tab
@@ -476,7 +485,7 @@ class AuthorDetails extends Component {
                     </Tab>
 
                     {
-                      selectedTabIndex === 3 &&
+                      selectedTabIndex === 4 &&
                         <div className={styles.filterIcon}>
                           <InteractiveSearchFilterMenuConnector
                             type="author"
@@ -488,6 +497,20 @@ class AuthorDetails extends Component {
                   <TabPanel>
                     <AuthorDetailsSeasonConnector
                       authorId={id}
+                      bookType="ebook"
+                      isExpanded={true}
+                      selectedState={selectedState}
+                      onExpandPress={this.onExpandPress}
+                      setSelectedState={this.setSelectedState}
+                      onSelectedChange={this.onSelectedChange}
+                      isEditorActive={isEditorActive}
+                    />
+                  </TabPanel>
+
+                  <TabPanel>
+                    <AuthorDetailsSeasonConnector
+                      authorId={id}
+                      bookType="audiobook"
                       isExpanded={true}
                       selectedState={selectedState}
                       onExpandPress={this.onExpandPress}

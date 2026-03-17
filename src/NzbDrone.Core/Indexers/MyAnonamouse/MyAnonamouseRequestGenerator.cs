@@ -4,6 +4,7 @@ using System.Net.Http;
 using NzbDrone.Common.Http;
 using NzbDrone.Common.Serializer;
 using NzbDrone.Core.IndexerSearch.Definitions;
+using NzbDrone.Core.Parser;
 
 namespace NzbDrone.Core.Indexers.MyAnonamouse
 {
@@ -63,14 +64,15 @@ namespace NzbDrone.Core.Indexers.MyAnonamouse
         {
             var searchType = MapSearchType(Settings.SearchType);
 
-            // Text search
+            // Text search — use raw title (not BookQuery, which URL-encodes spaces as '+')
+            var bookTitle = searchCriteria.BookTitle.SplitBookTitle(searchCriteria.Author.Name).Item1;
             var torBody = new Dictionary<string, object>
             {
                 { "main_cat", new[] { 13, 14 } },
                 { "searchType", searchType },
                 { "sortType", "default" },
                 { "startNumber", 0 },
-                { "text", searchCriteria.BookQuery },
+                { "text", bookTitle },
                 { "srchIn", new[] { "title", "author" } }
             };
 
@@ -114,7 +116,7 @@ namespace NzbDrone.Core.Indexers.MyAnonamouse
                 { "searchType", searchType },
                 { "sortType", "default" },
                 { "startNumber", 0 },
-                { "text", searchCriteria.AuthorQuery },
+                { "text", searchCriteria.Author.Name },
                 { "srchIn", new[] { "author" } }
             };
 

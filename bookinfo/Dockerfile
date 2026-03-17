@@ -1,0 +1,8 @@
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY *.py .
+VOLUME ["/data"]
+EXPOSE 28202
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "28202", "--workers", "1"]

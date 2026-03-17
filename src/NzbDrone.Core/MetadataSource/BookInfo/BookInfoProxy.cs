@@ -10,6 +10,7 @@ using NLog;
 using NzbDrone.Common.Cache;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Http;
+using NzbDrone.Common.Instrumentation.Extensions;
 using NzbDrone.Common.Serializer;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.Exceptions;
@@ -616,6 +617,13 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 if (resource?.Works == null)
                 {
                     throw new BookInfoException($"Failed to get works for {foreignAuthorId}");
+                }
+
+                if (resource.Partial)
+                {
+                    _logger.ProgressInfo("Fetching complete book list for {0} ({1} works so far, background pagination in progress)…", resource.Name, resource.Works.Count);
+                    System.Threading.Thread.Sleep(3000);
+                    continue;
                 }
 
                 resource.Works = SanitizeWorks(resource.Works, _logger);

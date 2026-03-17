@@ -182,6 +182,7 @@ async def get_author(author_id: int, background_tasks: BackgroundTasks, kca: str
                 first_page_next_token=first_page_next_token,
                 google_supplement_fn=gb_module.supplement_ebook_edition,
             )
+            complete["Partial"] = False
             now = time.monotonic()
             _pending_complete[author_id] = (complete, now + PENDING_TTL)
             # Evict stale entries
@@ -195,7 +196,12 @@ async def get_author(author_id: int, background_tasks: BackgroundTasks, kca: str
             _background_in_progress.discard(author_id)
         await _notify_readarr(author_id)
 
-    background_tasks.add_task(_complete_and_store)
+    if first_page_next_token:
+        partial["Partial"] = True
+        background_tasks.add_task(_complete_and_store)
+    else:
+        partial["Partial"] = False
+
     return partial
 
 

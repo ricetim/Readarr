@@ -14,5 +14,6 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         public List<WorkResource> Works { get; set; }
         public List<SeriesResource> Series { get; set; }
         public string Kca { get; set; }
+        public bool Partial { get; set; }
     }
 }

@@ -9,6 +9,10 @@ namespace NzbDrone.Core.Datastore.Migration
         protected override void MainDbUpgrade()
         {
             Alter.Table("AuthorMetadata").AddColumn("Kca").AsString().Nullable();
+        }
+
+        protected override void CacheDbUpgrade()
+        {
             Delete.FromTable("HttpResponse").AllRows();
         }
     }

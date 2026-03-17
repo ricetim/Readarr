@@ -5,6 +5,7 @@ namespace NzbDrone.Core.Books.Commands
     public class RefreshAuthorCommand : Command
     {
         public int? AuthorId { get; set; }
+        public string ForeignAuthorId { get; set; }
         public bool IsNewAuthor { get; set; }
 
         public RefreshAuthorCommand()
@@ -19,7 +20,7 @@ namespace NzbDrone.Core.Books.Commands
 
         public override bool SendUpdatesToClient => true;
 
-        public override bool UpdateScheduledTask => !AuthorId.HasValue;
+        public override bool UpdateScheduledTask => !AuthorId.HasValue && string.IsNullOrWhiteSpace(ForeignAuthorId);
 
         public override string CompletionMessage => "Completed";
     }

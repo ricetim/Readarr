@@ -36,9 +36,10 @@ RUN apk add --no-cache \
       nano \
       sqlite-libs \
       tzdata \
+    && addgroup -g 1000 readarr \
+    && adduser -u 1000 -G readarr -h /config -s /bin/sh -D readarr \
     && mkdir -p /app/bin \
-    && chown -R root:root /app \
-    && chmod -R 755 /app
+    && chown -R readarr:readarr /app
 
 WORKDIR /app
 
@@ -66,6 +67,7 @@ RUN printf "UpdateMethod=docker\nBranch=%s\nPackageVersion=%s\nPackageAuthor=[%s
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+USER readarr
 WORKDIR /config
 VOLUME ["/config"]
 

@@ -150,6 +150,7 @@ namespace NzbDrone.Common.Instrumentation
             fileTarget.ArchiveAboveSize = 1024000;
             fileTarget.MaxArchiveFiles = maxArchiveFiles;
             fileTarget.EnableFileDelete = true;
+            fileTarget.ArchiveOldFileOnStartup = true;
             fileTarget.ArchiveNumbering = ArchiveNumberingMode.Rolling;
             fileTarget.Layout = FILE_LOG_LAYOUT;
 

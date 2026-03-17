@@ -250,6 +250,7 @@ namespace NzbDrone.Core.Books
 
         protected override void PrepareNewChild(Book child, Author entity)
         {
+            child.Id = 0;
             child.Author = entity;
             child.AuthorMetadata = entity.Metadata.Value;
             child.AuthorMetadataId = entity.Metadata.Value.Id;
@@ -372,6 +373,17 @@ namespace NzbDrone.Core.Books
             if (message.AuthorId.HasValue)
             {
                 RefreshSelectedAuthors(new List<int> { message.AuthorId.Value }, isNew, trigger);
+            }
+            else if (!string.IsNullOrWhiteSpace(message.ForeignAuthorId))
+            {
+                var author = _authorService.FindById(message.ForeignAuthorId);
+                if (author == null)
+                {
+                    _logger.Debug("Webhook refresh: author with ForeignAuthorId {0} not found in DB, skipping", message.ForeignAuthorId);
+                    return;
+                }
+
+                RefreshSelectedAuthors(new List<int> { author.Id }, isNew, trigger);
             }
             else
             {

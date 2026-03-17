@@ -8,7 +8,14 @@ namespace NzbDrone.Common.Serializer
     {
         public override DateTime Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {
-            return DateTime.Parse(reader.GetString()).ToUniversalTime();
+            var s = reader.GetString();
+            if (string.IsNullOrWhiteSpace(s))
+            {
+                // Empty/null string: return default for non-nullable DateTime, let nullable wrapper handle null
+                return default;
+            }
+
+            return DateTime.Parse(s).ToUniversalTime();
         }
 
         public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)

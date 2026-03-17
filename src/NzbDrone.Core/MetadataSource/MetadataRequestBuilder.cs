@@ -1,7 +1,5 @@
-using NzbDrone.Common.Cloud;
-using NzbDrone.Common.Extensions;
+using System;
 using NzbDrone.Common.Http;
-using NzbDrone.Core.Configuration;
 
 namespace NzbDrone.Core.MetadataSource
 {
@@ -12,26 +10,13 @@ namespace NzbDrone.Core.MetadataSource
 
     public class MetadataRequestBuilder : IMetadataRequestBuilder
     {
-        private readonly IConfigService _configService;
-
-        private readonly IReadarrCloudRequestBuilder _defaultRequestFactory;
-
-        public MetadataRequestBuilder(IConfigService configService, IReadarrCloudRequestBuilder defaultRequestBuilder)
-        {
-            _configService = configService;
-            _defaultRequestFactory = defaultRequestBuilder;
-        }
+        private static readonly string MetadataUrl =
+            Environment.GetEnvironmentVariable("READARR_METADATA_URL")
+            ?? "http://localhost:28202/{route}";
 
         public IHttpRequestBuilderFactory GetRequestBuilder()
         {
-            if (_configService.MetadataSource.IsNotNullOrWhiteSpace())
-            {
-                return new HttpRequestBuilder(_configService.MetadataSource.TrimEnd("/") + "/{route}").KeepAlive().CreateFactory();
-            }
-            else
-            {
-                return _defaultRequestFactory.Metadata;
-            }
+            return new HttpRequestBuilder(MetadataUrl).KeepAlive().CreateFactory();
         }
     }
 }

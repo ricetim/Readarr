@@ -262,13 +262,6 @@ namespace NzbDrone.Core.Configuration
             set { SetValue("ChownGroup", value); }
         }
 
-        public string MetadataSource
-        {
-            get { return GetValue("MetadataSource", ""); }
-
-            set { SetValue("MetadataSource", value); }
-        }
-
         public WriteAudioTagsType WriteAudioTags
         {
             get { return GetValueEnum("WriteAudioTags", WriteAudioTagsType.No); }

@@ -156,9 +156,11 @@ namespace NzbDrone.Core.Books
 
         protected override bool ShouldDelete(Book local)
         {
-            // not manually added and has no files
-            return local.AddOptions.AddType != BookAddType.Manual &&
-                !_mediaFileService.GetFilesByBook(local.Id).Any();
+            // Never auto-delete books during refresh. Our metadata source returns
+            // partial data on first fetch (fast-path), so a book being absent from
+            // a single refresh response does not mean it was removed from the source.
+            // Books should only be removed via explicit user action.
+            return false;
         }
 
         protected override void LogProgress(Book local)

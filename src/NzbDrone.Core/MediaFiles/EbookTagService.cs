@@ -361,7 +361,7 @@ namespace NzbDrone.Core.MediaFiles
                     result.Authors = new List<string> { book.Info.Author };
                     result.BookTitle = book.Info.Title;
 
-                    _logger.Trace(book.Info.ToJson());
+                    _logger.Trace("PDF info: Author={0}, Title={1}", book.Info.Author, book.Info.Title);
                 }
             }
             catch (Exception e)

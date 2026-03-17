@@ -2,11 +2,28 @@ services:
   readarr:
     build: .
     container_name: readarr
+    user: "1000:1000"
     ports:
       - "8787:8787"
     volumes:
       - readarr-config:/config
+    environment:
+      - READARR_METADATA_URL=http://bookinfo:28202/{route}
+    depends_on:
+      - bookinfo
+    restart: unless-stopped
+
+  bookinfo:
+    build: ./bookinfo
+    container_name: bookinfo
+    ports:
+      - "28202:28202"
+    volumes:
+      - bookinfo-logs:/logs
+    environment:
+      - GOOGLE_BOOKS_API_KEY=${GOOGLE_BOOKS_API_KEY:-}
     restart: unless-stopped
 
 volumes:
   readarr-config:
+  bookinfo-logs:

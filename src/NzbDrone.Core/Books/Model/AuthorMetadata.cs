@@ -34,6 +34,7 @@ namespace NzbDrone.Core.Books
         public List<Links> Links { get; set; }
         public List<string> Genres { get; set; }
         public Ratings Ratings { get; set; }
+        public string Kca { get; set; }
 
         public override string ToString()
         {
@@ -60,6 +61,7 @@ namespace NzbDrone.Core.Books
             Links = other.Links;
             Genres = other.Genres;
             Ratings = other.Ratings.Votes > 0 ? other.Ratings : Ratings;
+            Kca = other.Kca.IsNullOrWhiteSpace() ? Kca : other.Kca;
         }
     }
 }

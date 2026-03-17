@@ -13,5 +13,6 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         public double AverageRating { get; set; }
         public List<WorkResource> Works { get; set; }
         public List<SeriesResource> Series { get; set; }
+        public string Kca { get; set; }
     }
 }

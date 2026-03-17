@@ -1,9 +1,11 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace NzbDrone.Core.Books
 {
     public interface IAuthorMetadataService
     {
+        AuthorMetadata FindById(string foreignAuthorId);
         bool Upsert(AuthorMetadata author);
         bool UpsertMany(List<AuthorMetadata> authors);
     }
@@ -15,6 +17,11 @@ namespace NzbDrone.Core.Books
         public AuthorMetadataService(IAuthorMetadataRepository authorMetadataRepository)
         {
             _authorMetadataRepository = authorMetadataRepository;
+        }
+
+        public AuthorMetadata FindById(string foreignAuthorId)
+        {
+            return _authorMetadataRepository.FindById(new List<string> { foreignAuthorId }).FirstOrDefault();
         }
 
         public bool Upsert(AuthorMetadata author)

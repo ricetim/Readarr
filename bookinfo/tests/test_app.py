@@ -213,3 +213,64 @@ async def test_book_edition_found_redirects_to_author(app_and_client):
     response = await client.get("/book/42640737", follow_redirects=False)
     assert response.status_code == 302
     assert "/author/3389" in response.headers["location"]
+
+
+@pytest.mark.asyncio
+async def test_delete_cache_author_removes_pending(app_and_client):
+    client, mock_gr = app_and_client
+    import app as app_module
+
+    app_module._pending_complete[3389] = ({"ForeignId": 3389}, time.monotonic() + 3600)
+    response = await client.delete("/cache/author/3389")
+    assert response.status_code == 204
+    assert 3389 not in app_module._pending_complete
+
+
+@pytest.mark.asyncio
+async def test_delete_cache_author_noop_when_missing(app_and_client):
+    client, mock_gr = app_and_client
+    # Should not error if author not in pending
+    response = await client.delete("/cache/author/99999")
+    assert response.status_code == 204
+
+
+@pytest.mark.asyncio
+async def test_get_book_bulk_empty(app_and_client):
+    client, mock_gr = app_and_client
+    response = await client.get("/book/bulk")
+    assert response.status_code == 200
+    data = response.json()
+    assert data == {"Works": [], "Series": [], "Authors": []}
+
+
+@pytest.mark.asyncio
+async def test_get_book_bulk_returns_works(app_and_client):
+    client, mock_gr = app_and_client
+    mock_gr.batch_graphql = AsyncMock(
+        return_value=[
+            {
+                "work": {"legacyId": 111, "editions": {"edges": []}},
+                "primaryContributorEdge": {
+                    "node": {"legacyId": 3389, "name": "C.S. Lewis"}
+                },
+                "legacyId": 42640737,
+                "title": "The Lion, the Witch and the Wardrobe",
+            }
+        ]
+    )
+    response = await client.get("/book/bulk?id=42640737")
+    assert response.status_code == 200
+    data = response.json()
+    assert len(data["Works"]) == 1
+    assert len(data["Authors"]) == 1
+    assert data["Authors"][0]["ForeignId"] == 3389
+
+
+@pytest.mark.asyncio
+async def test_post_book_bulk_redirects_to_get(app_and_client):
+    client, mock_gr = app_and_client
+    response = await client.post("/book/bulk", json=[42640737, 12345], follow_redirects=False)
+    assert response.status_code == 302
+    location = response.headers["location"]
+    assert "id=42640737" in location
+    assert "id=12345" in location

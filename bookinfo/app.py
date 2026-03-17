@@ -14,7 +14,7 @@ from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Response
 from fastapi.responses import RedirectResponse
 
 import google_books as gb_module
-from goodreads import GoodreadsClient
+from goodreads import GoodreadsClient, map_book, map_work
 
 logger = logging.getLogger(__name__)
 
@@ -167,28 +167,84 @@ async def get_author(author_id: int, background_tasks: BackgroundTasks, kca: str
                 break
 
     async def _complete_and_store():
-        complete = await goodreads_client.complete_author_background(
-            author_id=author_id,
-            partial_data=partial,
-            kca=kca,
-            first_page_next_token=first_page_next_token,
-            google_supplement_fn=gb_module.supplement_ebook_edition,
-        )
-        now = time.monotonic()
-        _pending_complete[author_id] = (complete, now + PENDING_TTL)
-        # Evict stale entries
-        stale = [aid for aid, (_data, deadline) in _pending_complete.items() if deadline < now]
-        for aid in stale:
-            _pending_complete.pop(aid, None)
+        try:
+            complete = await goodreads_client.complete_author_background(
+                author_id=author_id,
+                partial_data=partial,
+                kca=kca,
+                first_page_next_token=first_page_next_token,
+                google_supplement_fn=gb_module.supplement_ebook_edition,
+            )
+            now = time.monotonic()
+            _pending_complete[author_id] = (complete, now + PENDING_TTL)
+            # Evict stale entries
+            stale = [aid for aid, (_data, deadline) in _pending_complete.items() if deadline < now]
+            for aid in stale:
+                _pending_complete.pop(aid, None)
+        except Exception as exc:
+            logger.warning("Background completion failed for author %d: %s", author_id, exc)
+            return
         await _notify_readarr(author_id)
 
     background_tasks.add_task(_complete_and_store)
     return partial
 
 
+@app.delete("/cache/author/{author_id}", status_code=204)
+async def delete_author_cache(author_id: int):
+    """Remove any pending completed data for this author."""
+    _pending_complete.pop(author_id, None)
+    return Response(status_code=204)
+
+
 @app.get("/work/{work_id}")
 async def get_work(work_id: int):
     raise HTTPException(status_code=404, detail="Work not found")
+
+
+@app.get("/book/bulk")
+async def get_book_bulk(id: list[int] = Query(default=[])):
+    """Hydrate search results: resolve edition IDs to works via Goodreads."""
+    if not id:
+        return {"Works": [], "Series": [], "Authors": []}
+
+    book_results = await goodreads_client.batch_graphql(id)
+
+    works = []
+    author_ids: set[int] = set()
+    authors = []
+
+    for gql_book in book_results:
+        gql_work = gql_book.get("work") or {}
+        work_foreign_id = gql_work.get("legacyId")
+        if not work_foreign_id:
+            continue
+        contrib_edge = gql_book.get("primaryContributorEdge") or {}
+        author_id = (contrib_edge.get("node") or {}).get("legacyId") or 0
+        inline_editions = [
+            e["node"]
+            for e in (gql_work.get("editions") or {}).get("edges", [])
+            if e.get("node")
+        ]
+        all_editions = [map_book(gql_book, author_id)] + [
+            map_book(e, author_id) for e in inline_editions
+        ]
+        work_dict = map_work(gql_book, all_editions, author_id)
+        works.append(work_dict)
+
+        if author_id and author_id not in author_ids:
+            author_ids.add(author_id)
+            name = (contrib_edge.get("node") or {}).get("name") or ""
+            authors.append({"ForeignId": author_id, "Name": name, "KCA": ""})
+
+    return {"Works": works, "Series": [], "Authors": authors}
+
+
+@app.post("/book/bulk")
+async def post_book_bulk(ids: list[int]):
+    """POST redirects to GET (compatibility)."""
+    id_params = "&".join(f"id={i}" for i in ids)
+    return RedirectResponse(url=f"/book/bulk?{id_params}", status_code=302)
 
 
 @app.get("/book/{edition_id}")

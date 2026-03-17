@@ -5,9 +5,6 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
-using LazyCache;
-using LazyCache.Providers;
-using Microsoft.Extensions.Caching.Memory;
 using Newtonsoft.Json;
 using NLog;
 using NzbDrone.Common.Cache;
@@ -16,7 +13,6 @@ using NzbDrone.Common.Http;
 using NzbDrone.Common.Serializer;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.Exceptions;
-using NzbDrone.Core.Http;
 using NzbDrone.Core.MediaCover;
 using NzbDrone.Core.MetadataSource.Goodreads;
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -32,20 +28,19 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         };
 
         private readonly IHttpClient _httpClient;
-        private readonly ICachedHttpResponseService _cachedHttpClient;
         private readonly IGoodreadsSearchProxy _goodreadsSearchProxy;
         private readonly IAuthorService _authorService;
+        private readonly IAuthorMetadataService _authorMetadataService;
         private readonly IBookService _bookService;
         private readonly IEditionService _editionService;
         private readonly Logger _logger;
         private readonly IMetadataRequestBuilder _requestBuilder;
         private readonly ICached<HashSet<string>> _cache;
-        private readonly CachingService _authorCache;
 
         public BookInfoProxy(IHttpClient httpClient,
-                             ICachedHttpResponseService cachedHttpClient,
                              IGoodreadsSearchProxy goodreadsSearchProxy,
                              IAuthorService authorService,
+                             IAuthorMetadataService authorMetadataService,
                              IBookService bookService,
                              IEditionService editionService,
                              IMetadataRequestBuilder requestBuilder,
@@ -53,20 +48,14 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                              ICacheManager cacheManager)
         {
             _httpClient = httpClient;
-            _cachedHttpClient = cachedHttpClient;
             _goodreadsSearchProxy = goodreadsSearchProxy;
             _authorService = authorService;
+            _authorMetadataService = authorMetadataService;
             _bookService = bookService;
             _editionService = editionService;
             _requestBuilder = requestBuilder;
             _cache = cacheManager.GetCache<HashSet<string>>(GetType());
             _logger = logger;
-
-            _authorCache = new CachingService(new MemoryCacheProvider(new MemoryCache(new MemoryCacheOptions { SizeLimit = 10 })));
-            _authorCache.DefaultCachePolicy = new CacheDefaults
-            {
-                DefaultCacheDurationSeconds = 60
-            };
         }
 
         public HashSet<string> GetChangedAuthors(DateTime startTime)
@@ -94,11 +83,6 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
             try
             {
-                if (useCache)
-                {
-                    return PollAuthor(foreignAuthorId);
-                }
-
                 return PollAuthorUncached(foreignAuthorId);
             }
             catch (BookInfoException e)
@@ -428,7 +412,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
             if (type == "author")
             {
-                var author = PollAuthor(newId);
+                var author = PollAuthorUncached(newId);
 
                 book = author.Books.Value.FirstOrDefault(b => b.Editions.Value.Any(e => e.ForeignEditionId == id.ToString()));
                 authors = new List<AuthorMetadata> { author.Metadata.Value };
@@ -521,7 +505,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             var authors = resource.Authors.Select(MapAuthorMetadata).ToDictionary(x => x.ForeignAuthorId, x => x);
             var series = resource.Series.Select(MapSeries).ToList();
 
-            foreach (var work in resource.Works)
+            var sanitizedWorks = SanitizeWorks(resource.Works, _logger);
+            foreach (var work in sanitizedWorks)
             {
                 var book = MapBook(work);
                 var authorId = work.Books.OrderByDescending(b => b.AverageRating * b.RatingCount).First().Contributors.First().ForeignId.ToString();
@@ -586,77 +571,56 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             book.AuthorMetadataId = author.AuthorMetadataId;
         }
 
-        private Author PollAuthor(string foreignAuthorId)
-        {
-            return _authorCache.GetOrAdd(foreignAuthorId,
-                () => PollAuthorUncached(foreignAuthorId),
-                new LazyCacheEntryOptions
-                {
-                    AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-                    ImmediateAbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10),
-                    Size = 1,
-                    SlidingExpiration = TimeSpan.FromMinutes(1),
-                    ExpirationMode = ExpirationMode.ImmediateEviction
-                }.RegisterPostEvictionCallback((key, value, reason, state) => _logger.Debug($"Clearing cache for {key} due to {reason}")));
-        }
-
         private Author PollAuthorUncached(string foreignAuthorId)
         {
-            AuthorResource resource = null;
+            var kca = _authorMetadataService.FindById(foreignAuthorId)?.Kca ?? string.Empty;
 
-            var useCache = true;
-
-            for (var i = 0; i < 60; i++)
+            while (true)
             {
-                var httpRequest = _requestBuilder.GetRequestBuilder().Create()
+                var httpRequest = _requestBuilder.GetRequestBuilder()
+                    .Create()
                     .SetSegment("route", $"author/{foreignAuthorId}")
+                    .AddQueryParam("kca", kca)
                     .Build();
 
                 httpRequest.AllowAutoRedirect = true;
                 httpRequest.SuppressHttpError = true;
 
-                var httpResponse = _cachedHttpClient.Get(httpRequest, useCache, TimeSpan.FromMinutes(30));
+                var httpResponse = _httpClient.Get(httpRequest);
+
+                if (httpResponse.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    WaitUntilRetry(httpResponse);
+                    continue;
+                }
 
                 if (httpResponse.HasHttpError)
                 {
-                    if (httpResponse.StatusCode == HttpStatusCode.TooManyRequests)
-                    {
-                        WaitUntilRetry(httpResponse);
-                        continue;
-                    }
-                    else if (httpResponse.StatusCode == HttpStatusCode.NotFound)
+                    if (httpResponse.StatusCode == HttpStatusCode.NotFound)
                     {
                         throw new AuthorNotFoundException(foreignAuthorId);
                     }
-                    else if (httpResponse.StatusCode == HttpStatusCode.BadRequest)
+
+                    if (httpResponse.StatusCode == HttpStatusCode.BadRequest)
                     {
                         throw new BadRequestException(foreignAuthorId);
                     }
-                    else
-                    {
-                        throw new BookInfoException("Unexpected error fetching author data");
-                    }
+
+                    throw new BookInfoException("Unexpected error fetching author data from bookinfo");
                 }
 
-                resource = JsonSerializer.Deserialize<AuthorResource>(httpResponse.Content, SerializerSettings);
+                var resource = JsonSerializer.Deserialize<AuthorResource>(httpResponse.Content, SerializerSettings);
 
-                if (resource.Works != null)
+                if (resource?.Works == null)
                 {
-                    resource.Works ??= new List<WorkResource>();
-                    resource.Series ??= new List<SeriesResource>();
-                    break;
+                    throw new BookInfoException($"Failed to get works for {foreignAuthorId}");
                 }
 
-                useCache = false;
-                Thread.Sleep(2000);
-            }
+                resource.Works = SanitizeWorks(resource.Works, _logger);
+                resource.Series ??= new List<SeriesResource>();
 
-            if (resource?.Works == null)
-            {
-                throw new BookInfoException($"Failed to get works for {foreignAuthorId}");
+                return MapAuthor(resource);
             }
-
-            return MapAuthor(resource);
         }
 
         private Tuple<string, Book, List<AuthorMetadata>> PollBook(string foreignBookId)
@@ -694,7 +658,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
                     if (type == "author")
                     {
-                        var author = PollAuthor(newId);
+                        var author = PollAuthorUncached(newId);
                         var authorBook = author.Books.Value.SingleOrDefault(x => x.ForeignBookId == foreignBookId);
 
                         if (authorBook == null)
@@ -777,7 +741,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 Name = resource.Name.CleanSpaces(),
                 Overview = resource.Description,
                 Ratings = new Ratings { Votes = resource.RatingCount, Value = (decimal)resource.AverageRating },
-                Status = AuthorStatusType.Continuing
+                Status = AuthorStatusType.Continuing,
+                Kca = resource.Kca ?? string.Empty
             };
 
             metadata.SortName = metadata.Name.ToLower();
@@ -988,6 +953,28 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         private static int GetAuthorId(WorkResource b)
         {
             return b.Books.OrderByDescending(x => x.RatingCount * x.AverageRating).FirstOrDefault(x => x.Contributors.Any())?.Contributors.First().ForeignId ?? 0;
+        }
+
+        private static List<WorkResource> SanitizeWorks(List<WorkResource> works, Logger logger)
+        {
+            if (works == null)
+            {
+                return works; // preserve null — callers that pass null already handle it
+            }
+
+            var before = works.Count;
+            var sanitized = works
+                .Where(w => w.Books != null && w.Books.Count > 0 &&
+                            w.Authors != null && w.Authors.Count > 0)
+                .ToList();
+
+            var dropped = before - sanitized.Count;
+            if (dropped > 0)
+            {
+                logger.Debug($"SanitizeWorks: dropped {dropped} works with null/empty Books or Authors");
+            }
+
+            return sanitized;
         }
     }
 }

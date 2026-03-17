@@ -534,7 +534,6 @@ class GoodreadsClient:
 
         author_dict = {
             "ForeignId": author_id,
-            "KCA": author_kca,
             "Kca": author_kca,
             "Name": author_name,
             "Description": author_description,
@@ -606,11 +605,6 @@ class GoodreadsClient:
                 for w in works_page
                 if w.get("legacyId") and w["legacyId"] not in works_by_id
             ]
-            new_work_kcas = {
-                w["legacyId"]: w.get("workKca", "")
-                for w in works_page
-                if w.get("legacyId")
-            }
             if new_ids:
                 book_results = await self.batch_graphql(new_ids)
                 for gql_book in book_results:

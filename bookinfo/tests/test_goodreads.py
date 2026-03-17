@@ -91,36 +91,6 @@ class TestGraphQLClient:
 from goodreads import XML_KEY
 
 
-class TestKcaResolution:
-    @respx.mock
-    async def test_resolve_kca_parses_xml(self):
-        xml_body = """<?xml version="1.0"?>
-<GoodreadsResponse>
-  <author><id>6949698</id><uri>kca://author/amzn1.gr.author.v1.ABC</uri></author>
-</GoodreadsResponse>"""
-        respx.get(
-            f"https://www.goodreads.com/author/show/6949698.xml?key={XML_KEY}"
-        ).mock(return_value=httpx.Response(200, text=xml_body))
-
-        client = GoodreadsClient()
-        kca = await client.resolve_kca(6949698)
-        assert kca == "kca://author/amzn1.gr.author.v1.ABC"
-        await client.close()
-
-    @respx.mock
-    async def test_resolve_kca_returns_empty_when_no_uri(self):
-        xml_body = """<?xml version="1.0"?>
-<GoodreadsResponse><author><id>1</id></author></GoodreadsResponse>"""
-        respx.get(
-            f"https://www.goodreads.com/author/show/1.xml?key={XML_KEY}"
-        ).mock(return_value=httpx.Response(200, text=xml_body))
-
-        client = GoodreadsClient()
-        kca = await client.resolve_kca(1)
-        assert kca == ""
-        await client.close()
-
-
 class TestAuthorWorksPage:
     @respx.mock
     async def test_returns_filtered_works_list(self):

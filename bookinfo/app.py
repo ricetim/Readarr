@@ -132,10 +132,13 @@ async def author_changed():
 
 @app.get("/author/{author_id}")
 async def get_author(author_id: int, background_tasks: BackgroundTasks, kca: str = Query(default="")):
-    # Check _pending_complete first — one-time pickup of completed background data
+    # Return any pending data (partial or complete). Only pop when Partial=False so
+    # Readarr can poll and see incremental progress as each page is fetched.
     if author_id in _pending_complete:
-        complete, _deadline = _pending_complete.pop(author_id)
-        return complete
+        data, _deadline = _pending_complete[author_id]
+        if not data.get("Partial", False):
+            _pending_complete.pop(author_id)
+        return data
 
     author_name = ""
     author_image_url = ""
@@ -174,6 +177,12 @@ async def get_author(author_id: int, background_tasks: BackgroundTasks, kca: str
         if author_id in _background_in_progress:
             return
         _background_in_progress.add(author_id)
+
+        def on_progress(works_by_id: dict) -> None:
+            """Called after each page — update _pending_complete with Partial=True."""
+            intermediate = {**partial, "Works": list(works_by_id.values()), "Partial": True}
+            _pending_complete[author_id] = (intermediate, time.monotonic() + PENDING_TTL)
+
         try:
             complete = await goodreads_client.complete_author_background(
                 author_id=author_id,
@@ -181,6 +190,7 @@ async def get_author(author_id: int, background_tasks: BackgroundTasks, kca: str
                 kca=kca,
                 first_page_next_token=first_page_next_token,
                 google_supplement_fn=gb_module.supplement_ebook_edition,
+                on_progress=on_progress,
             )
             complete["Partial"] = False
             now = time.monotonic()

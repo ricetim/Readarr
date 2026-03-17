@@ -10,7 +10,6 @@ using NLog;
 using NzbDrone.Common.Cache;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Http;
-using NzbDrone.Common.Instrumentation.Extensions;
 using NzbDrone.Common.Serializer;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.Exceptions;
@@ -575,11 +574,9 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         private Author PollAuthorUncached(string foreignAuthorId)
         {
             var kca = _authorMetadataService.FindById(foreignAuthorId)?.Kca ?? string.Empty;
-            var pollStart = DateTime.UtcNow;
-            const int pollTimeoutSeconds = 300;
 
-            // Loop retries on 429 (rate limited) and on Partial=true responses while
-            // bookinfo paginates remaining works in the background.
+            // Retry only on 429. Partial responses are returned immediately so
+            // RefreshAuthorService can sync available books to DB before fetching more.
             while (true)
             {
                 var httpRequest = _requestBuilder.GetRequestBuilder()
@@ -619,22 +616,6 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 if (resource?.Works == null)
                 {
                     throw new BookInfoException($"Failed to get works for {foreignAuthorId}");
-                }
-
-                if (resource.Partial)
-                {
-                    var elapsed = (int)(DateTime.UtcNow - pollStart).TotalSeconds;
-                    if (elapsed >= pollTimeoutSeconds)
-                    {
-                        _logger.Warn("Timed out waiting for complete book list for {0} after {1}s, proceeding with {2} works", resource.Name, elapsed, resource.Works.Count);
-                        resource.Works = SanitizeWorks(resource.Works, _logger);
-                        resource.Series ??= new List<SeriesResource>();
-                        return MapAuthor(resource);
-                    }
-
-                    _logger.ProgressInfo("Fetching complete book list for {0} ({1} works so far, {2}s elapsed)…", resource.Name, resource.Works.Count, elapsed);
-                    System.Threading.Thread.Sleep(3000);
-                    continue;
                 }
 
                 resource.Works = SanitizeWorks(resource.Works, _logger);
@@ -807,7 +788,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 Metadata = metadata,
                 CleanName = Parser.Parser.CleanAuthorName(metadata.Name),
                 Books = books,
-                Series = series
+                Series = series,
+                IsPartial = resource.Partial
             };
 
             return result;

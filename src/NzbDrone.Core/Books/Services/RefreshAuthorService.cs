@@ -350,6 +350,33 @@ namespace NzbDrone.Core.Books
                 {
                     var data = GetSkyhookData(author.ForeignAuthorId);
                     updated |= RefreshEntityInfo(author, null, data, true, false, null);
+
+                    // bookinfo returns partial data while background pagination is in progress.
+                    // Poll until complete, syncing each batch to DB so books appear progressively.
+                    var lastWorkCount = data.Books?.Value?.Count ?? 0;
+                    var noProgressSince = DateTime.UtcNow;
+
+                    while (data.IsPartial)
+                    {
+                        var elapsed = (int)(DateTime.UtcNow - noProgressSince).TotalSeconds;
+                        if (elapsed >= 300)
+                        {
+                            _logger.Warn("No new works for {0} in {1}s, stopping partial fetch", author.Name, elapsed);
+                            break;
+                        }
+
+                        System.Threading.Thread.Sleep(3000);
+                        data = GetSkyhookData(author.ForeignAuthorId);
+                        updated |= RefreshEntityInfo(author, null, data, true, false, null);
+
+                        var workCount = data.Books?.Value?.Count ?? 0;
+                        if (workCount > lastWorkCount)
+                        {
+                            _logger.ProgressInfo("Fetching complete book list for {0} ({1} works so far)…", author.Name, workCount);
+                            lastWorkCount = workCount;
+                            noProgressSince = DateTime.UtcNow;
+                        }
+                    }
                 }
                 catch (Exception e)
                 {

@@ -581,6 +581,7 @@ class GoodreadsClient:
         kca: str,
         first_page_next_token: Optional[str] = None,
         google_supplement_fn: Optional[Callable] = None,
+        on_progress: Optional[Callable] = None,
     ) -> dict:
         """Fetch pages 2+ of works, complete edition data, run Google Books supplement.
 
@@ -654,6 +655,9 @@ class GoodreadsClient:
 
                     work_dict = map_work(gql_book, all_editions, author_id)
                     works_by_id[work_dict["ForeignId"]] = work_dict
+
+            if on_progress:
+                on_progress(works_by_id)
 
         # Google Books supplement for works with no ebook editions
         if google_supplement_fn:

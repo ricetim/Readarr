@@ -43,6 +43,11 @@ namespace NzbDrone.Core.Books
         [MemberwiseEqualityIgnore]
         public LazyLoaded<List<Series>> Series { get; set; }
 
+        // Transient flag set by BookInfoProxy when bookinfo returned partial data.
+        // Not persisted to DB.
+        [MemberwiseEqualityIgnore]
+        public bool IsPartial { get; set; }
+
         //compatibility properties
         [MemberwiseEqualityIgnore]
         public string Name

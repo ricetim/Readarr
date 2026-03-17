@@ -29,6 +29,7 @@ PENDING_TTL = 2 * 3600  # 2 hours in seconds
 
 goodreads_client: Optional[GoodreadsClient] = None
 _pending_complete: dict[int, tuple[dict, float]] = {}
+_background_in_progress: set[int] = set()
 
 
 async def _notify_readarr(author_id: int) -> None:
@@ -170,6 +171,9 @@ async def get_author(author_id: int, background_tasks: BackgroundTasks, kca: str
                 break
 
     async def _complete_and_store():
+        if author_id in _background_in_progress:
+            return
+        _background_in_progress.add(author_id)
         try:
             complete = await goodreads_client.complete_author_background(
                 author_id=author_id,
@@ -187,6 +191,8 @@ async def get_author(author_id: int, background_tasks: BackgroundTasks, kca: str
         except Exception as exc:
             logger.warning("Background completion failed for author %d: %s", author_id, exc)
             return
+        finally:
+            _background_in_progress.discard(author_id)
         await _notify_readarr(author_id)
 
     background_tasks.add_task(_complete_and_store)

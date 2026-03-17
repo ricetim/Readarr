@@ -206,6 +206,9 @@ async def get_author(author_id: int, background_tasks: BackgroundTasks, kca: str
 
     if first_page_next_token:
         partial["Partial"] = True
+        # Seed the cache immediately so subsequent polls are served from here
+        # rather than triggering a fresh fast-path fetch each time.
+        _pending_complete[author_id] = (partial, time.monotonic() + PENDING_TTL)
         background_tasks.add_task(_complete_and_store)
     else:
         partial["Partial"] = False

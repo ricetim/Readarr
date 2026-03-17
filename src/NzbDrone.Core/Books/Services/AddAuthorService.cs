@@ -3,12 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FluentValidation;
-using FluentValidation.Results;
 using NLog;
 using NzbDrone.Common.EnsureThat;
 using NzbDrone.Common.Extensions;
-using NzbDrone.Core.Exceptions;
-using NzbDrone.Core.MetadataSource;
 using NzbDrone.Core.Organizer;
 using NzbDrone.Core.Parser;
 
@@ -24,21 +21,18 @@ namespace NzbDrone.Core.Books
     {
         private readonly IAuthorService _authorService;
         private readonly IAuthorMetadataService _authorMetadataService;
-        private readonly IProvideAuthorInfo _authorInfo;
         private readonly IBuildFileNames _fileNameBuilder;
         private readonly IAddAuthorValidator _addAuthorValidator;
         private readonly Logger _logger;
 
         public AddAuthorService(IAuthorService authorService,
                                 IAuthorMetadataService authorMetadataService,
-                                IProvideAuthorInfo authorInfo,
                                 IBuildFileNames fileNameBuilder,
                                 IAddAuthorValidator addAuthorValidator,
                                 Logger logger)
         {
             _authorService = authorService;
             _authorMetadataService = authorMetadataService;
-            _authorInfo = authorInfo;
             _fileNameBuilder = fileNameBuilder;
             _addAuthorValidator = addAuthorValidator;
             _logger = logger;
@@ -91,25 +85,11 @@ namespace NzbDrone.Core.Books
 
         private Author AddSkyhookData(Author newAuthor)
         {
-            Author author;
-
-            try
-            {
-                author = _authorInfo.GetAuthorInfo(newAuthor.Metadata.Value.ForeignAuthorId, false);
-            }
-            catch (AuthorNotFoundException)
-            {
-                _logger.Error("ReadarrId {0} was not found, it may have been removed from Goodreads.", newAuthor.Metadata.Value.ForeignAuthorId);
-
-                throw new ValidationException(new List<ValidationFailure>
-                {
-                    new ("ForeignAuthorId", "An author with this ID was not found", newAuthor.Metadata.Value.ForeignAuthorId)
-                });
-            }
-
-            author.ApplyChanges(newAuthor);
-
-            return author;
+            // Skip the blocking bookinfo fetch at add time. The search result already
+            // provides sufficient metadata (name, foreign ID, image URL, KCA). Books,
+            // series, and full metadata are populated by RefreshAuthorCommand which is
+            // queued immediately after the author is saved to DB.
+            return newAuthor;
         }
 
         private Author SetPropertiesAndValidate(Author newAuthor)

@@ -4,6 +4,7 @@ import asyncio
 import binascii
 import json
 import logging
+import re
 import time
 import xml.etree.ElementTree as ET
 from typing import Any, Callable, Coroutine, Optional
@@ -195,6 +196,33 @@ def map_book(gql_book: dict, author_foreign_id: int) -> dict:
     }
 
 
+def _build_series(works_by_id: dict) -> list:
+    """Aggregate per-work series links into the top-level Series list."""
+    series_by_id: dict[int, dict] = {}
+    for work in works_by_id.values():
+        work_id = work.get("ForeignId", 0)
+        for s in work.get("Series", []):
+            sid = s.get("ForeignId", 0)
+            if not sid:
+                continue
+            if sid not in series_by_id:
+                series_by_id[sid] = {
+                    "ForeignId": sid,
+                    "Title": s.get("Title", ""),
+                    "Description": "",
+                    "LinkItems": [],
+                }
+            existing_work_ids = {li["ForeignWorkId"] for li in series_by_id[sid]["LinkItems"]}
+            if work_id not in existing_work_ids:
+                series_by_id[sid]["LinkItems"].append({
+                    "ForeignWorkId": work_id,
+                    "PositionInSeries": s.get("PositionInSeries", ""),
+                    "SeriesPosition": len(series_by_id[sid]["LinkItems"]) + 1,
+                    "Primary": True,
+                })
+    return list(series_by_id.values())
+
+
 def map_work(gql_book: dict, editions: list[dict], author_foreign_id: int) -> dict:
     """Map a GetBook response (which wraps a work) to a WorkResource-shaped dict.
 
@@ -213,11 +241,14 @@ def map_work(gql_book: dict, editions: list[dict], author_foreign_id: int) -> di
     series_links = []
     for s in gql_book.get("bookSeries") or []:
         sr = s.get("series") or {}
+        web_url = sr.get("webUrl", "")
+        m = re.search(r"/series/(\d+)", web_url)
+        series_foreign_id = int(m.group(1)) if m else 0
         series_links.append(
             {
-                "ForeignId": 0,  # Series ForeignId not available at this level
+                "ForeignId": series_foreign_id,
                 "Title": sr.get("title", ""),
-                "Url": sr.get("webUrl", ""),
+                "Url": web_url,
                 "PositionInSeries": s.get("seriesPlacement", ""),
             }
         )
@@ -540,6 +571,7 @@ class GoodreadsClient:
             ]
             works.append(map_work(gql_book, all_editions, author_id))
 
+        works_by_id = {w["ForeignId"]: w for w in works}
         author_dict = {
             "ForeignId": author_id,
             "Kca": author_kca,
@@ -548,7 +580,7 @@ class GoodreadsClient:
             "ImageUrl": author_image_url,
             "Url": f"https://www.goodreads.com/author/show/{author_id}",
             "Works": works,
-            "Series": [],
+            "Series": _build_series(works_by_id),
         }
         return author_dict, first_page_next_token
 
@@ -674,5 +706,5 @@ class GoodreadsClient:
                     if synthetic:
                         work["Books"].append(synthetic)
 
-        updated = {**partial_data, "Works": list(works_by_id.values())}
+        updated = {**partial_data, "Works": list(works_by_id.values()), "Series": _build_series(works_by_id)}
         return updated

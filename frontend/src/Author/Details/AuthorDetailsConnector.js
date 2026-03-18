@@ -9,6 +9,7 @@ import { toggleAuthorMonitored } from 'Store/Actions/authorActions';
 import { clearBookFiles, fetchBookFiles } from 'Store/Actions/bookFileActions';
 import { saveBookEditor } from 'Store/Actions/bookIndexActions';
 import { executeCommand } from 'Store/Actions/commandActions';
+import { fetchBooks } from 'Store/Actions/bookActions';
 import { clearQueueDetails, fetchQueueDetails } from 'Store/Actions/queueActions';
 import { cancelFetchReleases, clearReleases } from 'Store/Actions/releaseActions';
 import { clearSeries, fetchSeries } from 'Store/Actions/seriesActions';
@@ -216,6 +217,7 @@ function createMapStateToProps() {
 }
 
 const mapDispatchToProps = {
+  fetchBooks,
   fetchSeries,
   clearSeries,
   saveBookEditor,
@@ -277,6 +279,7 @@ class AuthorDetailsConnector extends Component {
   populate = () => {
     const authorId = this.props.id;
 
+    this.props.fetchBooks({ authorId });
     this.props.fetchSeries({ authorId });
     this.props.fetchBookFiles({ authorId });
     this.props.fetchQueueDetails({ authorId });
@@ -342,6 +345,7 @@ AuthorDetailsConnector.propTypes = {
   isRefreshing: PropTypes.bool.isRequired,
   isRenamingFiles: PropTypes.bool.isRequired,
   isRenamingAuthor: PropTypes.bool.isRequired,
+  fetchBooks: PropTypes.func.isRequired,
   fetchSeries: PropTypes.func.isRequired,
   clearSeries: PropTypes.func.isRequired,
   saveBookEditor: PropTypes.func.isRequired,

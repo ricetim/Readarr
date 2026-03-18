@@ -96,7 +96,6 @@ class AuthorDetailsSeasonConnector extends Component {
 
 AuthorDetailsSeasonConnector.propTypes = {
   authorId: PropTypes.number.isRequired,
-  bookType: PropTypes.oneOf(['ebook', 'audiobook']),
   toggleBooksMonitored: PropTypes.func.isRequired,
   setBooksTableOption: PropTypes.func.isRequired,
   setAuthorDetailsId: PropTypes.func.isRequired,

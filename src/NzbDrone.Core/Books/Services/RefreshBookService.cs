@@ -114,6 +114,11 @@ namespace NzbDrone.Core.Books
             if (book == null)
             {
                 data = GetSkyhookData(local);
+                if (data == null)
+                {
+                    return result;
+                }
+
                 book = data.Books.Value.SingleOrDefault(x => x.ForeignBookId == local.ForeignBookId);
             }
 

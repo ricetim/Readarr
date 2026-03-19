@@ -2,6 +2,7 @@ using System.Linq;
 using FluentAssertions;
 using Moq;
 using NUnit.Framework;
+using NzbDrone.Core.Books;
 using NzbDrone.Core.Indexers.Newznab;
 using NzbDrone.Core.IndexerSearch.Definitions;
 using NzbDrone.Core.Test.Framework;
@@ -25,7 +26,7 @@ namespace NzbDrone.Core.Test.IndexerTests.NewznabTests
 
             _singleBookSearchCriteria = new BookSearchCriteria
             {
-                Author = new Books.Author { Name = "Alien Ant Farm" },
+                Author = new Author { Name = "Alien Ant Farm" },
                 BookTitle = "TruANT"
             };
 

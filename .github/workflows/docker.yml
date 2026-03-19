@@ -33,18 +33,9 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Update Docker Hub README
-        env:
-          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
-        run: |
-          TOKEN=$(curl -s -X POST "https://hub.docker.com/v2/users/login" \
-            -H "Content-Type: application/json" \
-            -d "{\"username\": \"${DOCKERHUB_USERNAME}\", \"password\": \"${DOCKERHUB_TOKEN}\"}" \
-            | python3 -c "import sys,json; print(json.load(sys.stdin)['token'])")
-
-          README=$(cat README-docker.md)
-
-          curl -s -X PATCH "https://hub.docker.com/v2/repositories/ricetim/readarr-rresurrected/" \
-            -H "Authorization: Bearer ${TOKEN}" \
-            -H "Content-Type: application/json" \
-            -d "{\"full_description\": $(echo "${README}" | python3 -c "import sys,json; print(json.dumps(sys.stdin.read()))")}"
+        uses: peter-evans/dockerhub-description@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PASSWORD }}
+          repository: ricetim/readarr-rresurrected
+          readme-filepath: ./README-docker.md

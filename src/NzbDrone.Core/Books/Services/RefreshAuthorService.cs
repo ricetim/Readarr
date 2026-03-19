@@ -331,9 +331,20 @@ namespace NzbDrone.Core.Books
 
             if (shouldRescan)
             {
-                // some metadata has updated so rescan unmatched
-                // (but don't add new authors to reduce repeated searches against api)
-                var folders = _rootFolderService.All().Select(x => x.Path).ToList();
+                // Scope the scan to the specific author path(s) to avoid re-reading the
+                // entire library on every author add or refresh. Fall back to root folders
+                // if no paths are available (e.g. author path not yet set).
+                var authorPaths = (authorIds != null && authorIds.Any())
+                    ? _authorService.GetAuthors(authorIds)
+                        .Select(a => a.Path)
+                        .Where(p => !string.IsNullOrEmpty(p))
+                        .Distinct()
+                        .ToList()
+                    : new List<string>();
+
+                var folders = authorPaths.Any()
+                    ? authorPaths
+                    : _rootFolderService.All().Select(x => x.Path).ToList();
 
                 _commandQueueManager.Push(new RescanFoldersCommand(folders, FilterFilesType.Matched, false, authorIds));
             }

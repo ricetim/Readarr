@@ -101,6 +101,23 @@ query GetEditions($workId: ID!, $pagination: PaginationInput!) {
 }
 """
 
+_SEARCH_BY_AUTHOR_QUERY = """
+query SearchByAuthor($query: String!) {
+  searchResults(input: {query: $query, type: BOOK, field: AUTHOR}, pagination: {limit: 20}) {
+    totalCount
+    edges {
+      node {
+        ... on Book {
+          legacyId
+          work { legacyId }
+          primaryContributorEdge { node { legacyId name } }
+        }
+      }
+    }
+  }
+}
+"""
+
 _SEARCH_QUERY = """
 query Search($query: String!) {
   getSearchSuggestions(query: $query) {
@@ -584,26 +601,53 @@ class GoodreadsClient:
         return author_dict, first_page_next_token
 
     async def search(self, query: str) -> list[dict]:
-        """Search Goodreads via GraphQL getSearchSuggestions."""
-        data = await self.graphql_query(_SEARCH_QUERY, {"query": query})
-        suggestions = data.get("getSearchSuggestions", {})
-        results: list[dict] = []
-        for edge in suggestions.get("edges", []):
-            node = edge.get("node")
-            if not node:
-                continue
-            work = node.get("work") or {}
-            best_book = work.get("bestBook") or {}
-            author_edge = best_book.get("primaryContributorEdge") or {}
-            author_node = author_edge.get("node") or {}
-            results.append(
-                {
+        """Search Goodreads. Tries getSearchSuggestions first; falls back to
+        searchResults(field: AUTHOR) for author-name queries that return nothing."""
+        # Primary: autocomplete suggestions (works well for book titles and common names)
+        try:
+            data = await self.graphql_query(_SEARCH_QUERY, {"query": query})
+            suggestions = data.get("getSearchSuggestions", {})
+            results: list[dict] = []
+            for edge in suggestions.get("edges", []):
+                node = edge.get("node")
+                if not node:
+                    continue
+                work = node.get("work") or {}
+                best_book = work.get("bestBook") or {}
+                author_edge = best_book.get("primaryContributorEdge") or {}
+                author_node = author_edge.get("node") or {}
+                results.append({
                     "BookId": node.get("legacyId", 0),
                     "WorkId": work.get("legacyId", 0),
                     "Author": {"Id": author_node.get("legacyId", 0)},
-                }
-            )
-        return results
+                })
+            if results:
+                return results
+        except LookupError:
+            pass
+
+        # Fallback: author-field search (handles full names like "Kathryn Paige Harden"
+        # that getSearchSuggestions returns RESOURCE_NOT_FOUND for)
+        try:
+            data = await self.graphql_query(_SEARCH_BY_AUTHOR_QUERY, {"query": query})
+            edges = data.get("searchResults", {}).get("edges", []) or []
+            results = []
+            seen_works: set[int] = set()
+            for edge in edges:
+                node = edge.get("node") or {}
+                work_id = (node.get("work") or {}).get("legacyId", 0)
+                if not work_id or work_id in seen_works:
+                    continue
+                seen_works.add(work_id)
+                author_node = (node.get("primaryContributorEdge") or {}).get("node") or {}
+                results.append({
+                    "BookId": node.get("legacyId", 0),
+                    "WorkId": work_id,
+                    "Author": {"Id": author_node.get("legacyId", 0)},
+                })
+            return results
+        except LookupError:
+            return []
 
     async def complete_author_background(
         self,

@@ -115,6 +115,18 @@ namespace NzbDrone.Core.Test.IndexerTests.MyAnonamouseTests
         }
 
         [Test]
+        public void book_search_text_should_include_author_name_to_narrow_results()
+        {
+            var results = Subject.GetSearchRequests(_bookSearchCriteria);
+            var request = results.GetAllTiers().First().First().HttpRequest;
+            var body = GetRequestBody(request);
+
+            var text = body["tor"]["text"].Value<string>();
+            text.Should().Contain("Patrick Rothfuss");
+            text.Should().Contain("Name of the Wind");
+        }
+
+        [Test]
         public void book_search_with_isbn_should_produce_two_requests()
         {
             var results = Subject.GetSearchRequests(_bookSearchCriteria);

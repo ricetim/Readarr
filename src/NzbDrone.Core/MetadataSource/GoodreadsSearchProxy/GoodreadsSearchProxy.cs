@@ -36,8 +36,17 @@ namespace NzbDrone.Core.MetadataSource.Goodreads
                     .Build();
 
                 var response = _cachedHttpClient.Get<List<SearchJsonResource>>(httpRequest, true, TimeSpan.FromDays(5));
+                var resources = response.Resource ?? new List<SearchJsonResource>();
 
-                return response.Resource ?? new List<SearchJsonResource>();
+                // Don't return stale empty cache — re-fetch if empty so a previously-failed
+                // search (e.g. before bookinfo was running) doesn't stay broken for 5 days.
+                if (resources.Count == 0)
+                {
+                    response = _cachedHttpClient.Get<List<SearchJsonResource>>(httpRequest, false, TimeSpan.FromDays(5));
+                    resources = response.Resource ?? new List<SearchJsonResource>();
+                }
+
+                return resources;
             }
             catch (HttpException ex)
             {

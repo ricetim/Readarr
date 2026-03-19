@@ -401,7 +401,7 @@ class GoodreadsClient:
 
     async def get_author_works_page(
         self, kca: str, author_id: int, token: Optional[str]
-    ) -> tuple[list[dict], Optional[str]]:
+    ) -> tuple[list[dict], Optional[str], int]:
         """Fetch one page of an author's works.
 
         Filters to works where the target author has role "Author".
@@ -421,7 +421,6 @@ class GoodreadsClient:
         contributor_data = data.get("getWorksByContributor", {})
         edges = contributor_data.get("edges", [])
         page_info = contributor_data.get("pageInfo", {})
-
         works: list[dict] = []
         for edge in edges:
             node = edge.get("node", {})
@@ -630,66 +629,76 @@ class GoodreadsClient:
             w["ForeignId"]: w for w in partial_data.get("Works", [])
         }
 
-        # Fetch remaining pages (2+) starting from the token the fast path returned.
-        # This avoids re-fetching page 1 against the rate limiter.
-        next_token = first_page_next_token
-        while next_token:
+        # --- Phase 1: collect all remaining work IDs (lightweight — no book details) ---
+        # This gives us an accurate filtered total before any detail fetching begins.
+        all_pending: list[dict] = []
+        token = first_page_next_token
+        while token:
             try:
-                works_page, next_token = await self.get_author_works_page(
-                    kca=kca, author_id=author_id, token=next_token
+                works_page, token = await self.get_author_works_page(
+                    kca=kca, author_id=author_id, token=token
                 )
             except Exception:
-                logger.warning("getWorksByContributor page failed for author %d, completing with %d works", author_id, len(works_by_id))
-                break
-            new_ids = [
-                w["legacyId"]
-                for w in works_page
-                if w.get("legacyId") and w["legacyId"] not in works_by_id
+                logger.warning("getWorksByContributor page failed for author %d, stopping at %d pending", author_id, len(all_pending))
+                token = None
+            for w in works_page:
+                if w.get("legacyId") and w["legacyId"] not in works_by_id:
+                    all_pending.append(w)
+
+        total_count = len(works_by_id) + len(all_pending)
+        logger.info("Author %d: %d in fast-path + %d remaining = %d total authored works",
+                    author_id, len(works_by_id), len(all_pending), total_count)
+
+        # --- Phase 2: fetch full details for pending works in batches ---
+        async def _enrich_work(gql_book: dict) -> dict:
+            """Fetch extra editions for one work and return the completed work dict."""
+            work = gql_book.get("work") or {}
+            work_kca = work.get("id", "")
+            inline_editions = [
+                e["node"]
+                for e in (work.get("editions") or {}).get("edges", [])
+                if e.get("node")
             ]
-            if new_ids:
-                book_results = await self.batch_graphql(new_ids)
-                for gql_book in book_results:
-                    work = gql_book.get("work") or {}
-                    work_kca = work.get("id", "")
-                    inline_editions = [
-                        e["node"]
-                        for e in (work.get("editions") or {}).get("edges", [])
-                        if e.get("node")
-                    ]
-                    all_editions = [map_book(gql_book, author_id)] + [
-                        map_book(e, author_id) for e in inline_editions
-                    ]
+            all_editions = [map_book(gql_book, author_id)] + [
+                map_book(e, author_id) for e in inline_editions
+            ]
 
-                    # Fetch additional editions via GetEditions (spec step 8):
-                    # catches editions truncated in the inline response.
-                    # Best-effort: a Lambda error on getEditions skips supplement for this work.
-                    if work_kca:
-                        try:
-                            inline_ids: set[int] = {
-                                e["ForeignId"] for e in all_editions if e.get("ForeignId")
-                            }
-                            ed_token: Optional[str] = None
-                            while True:
-                                extra_ids, ed_token = await self.get_editions_page(
-                                    work_kca, ed_token
-                                )
-                                extra_to_fetch = [i for i in extra_ids if i not in inline_ids]
-                                if extra_to_fetch:
-                                    extra_books = await self.batch_graphql(extra_to_fetch)
-                                    all_editions.extend(
-                                        map_book(b, author_id) for b in extra_books
-                                    )
-                                    inline_ids.update(extra_to_fetch)
-                                if not ed_token:
-                                    break
-                        except Exception:
-                            logger.debug("getEditions failed for work %s, using inline editions", work_kca)
+            if work_kca:
+                try:
+                    inline_ids: set[int] = {
+                        e["ForeignId"] for e in all_editions if e.get("ForeignId")
+                    }
+                    ed_token: Optional[str] = None
+                    while True:
+                        extra_ids, ed_token = await self.get_editions_page(
+                            work_kca, ed_token
+                        )
+                        extra_to_fetch = [i for i in extra_ids if i not in inline_ids]
+                        if extra_to_fetch:
+                            extra_books = await self.batch_graphql(extra_to_fetch)
+                            all_editions.extend(
+                                map_book(b, author_id) for b in extra_books
+                            )
+                            inline_ids.update(extra_to_fetch)
+                        if not ed_token:
+                            break
+                except Exception:
+                    logger.debug("getEditions failed for work %s, using inline editions", work_kca)
 
-                    work_dict = map_work(gql_book, all_editions, author_id)
-                    works_by_id[work_dict["ForeignId"]] = work_dict
+            return map_work(gql_book, all_editions, author_id)
 
-            if on_progress:
-                on_progress(works_by_id)
+        batch_size = 20
+        for i in range(0, len(all_pending), batch_size):
+            batch_items = all_pending[i:i + batch_size]
+            batch_ids = [w["legacyId"] for w in batch_items]
+            book_results = await self.batch_graphql(batch_ids)
+
+            # Fetch editions for all works in this batch concurrently.
+            enriched = await asyncio.gather(*(_enrich_work(b) for b in book_results))
+            for work_dict in enriched:
+                works_by_id[work_dict["ForeignId"]] = work_dict
+                if on_progress:
+                    on_progress(works_by_id, total_count)
 
         # Google Books supplement for works with no ebook editions
         if google_supplement_fn:

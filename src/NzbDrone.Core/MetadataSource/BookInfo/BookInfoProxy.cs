@@ -587,6 +587,7 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
 
                 httpRequest.AllowAutoRedirect = true;
                 httpRequest.SuppressHttpError = true;
+                httpRequest.RequestTimeout = TimeSpan.FromSeconds(120);
 
                 var httpResponse = _httpClient.Get(httpRequest);
 
@@ -789,7 +790,8 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                 CleanName = Parser.Parser.CleanAuthorName(metadata.Name),
                 Books = books,
                 Series = series,
-                IsPartial = resource.Partial
+                IsPartial = resource.Partial,
+                TotalBookCount = resource.TotalBookCount
             };
 
             return result;

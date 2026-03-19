@@ -15,5 +15,6 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
         public List<SeriesResource> Series { get; set; }
         public string Kca { get; set; }
         public bool Partial { get; set; }
+        public int TotalBookCount { get; set; }
     }
 }

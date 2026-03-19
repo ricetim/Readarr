@@ -348,12 +348,15 @@ namespace NzbDrone.Core.Books
             {
                 try
                 {
+                    _logger.ProgressInfo("Fetching book list for {0}…", author.Name);
                     var data = GetSkyhookData(author.ForeignAuthorId);
                     updated |= RefreshEntityInfo(author, null, data, true, false, null);
 
                     // bookinfo returns partial data while background pagination is in progress.
-                    // Poll until complete, syncing each batch to DB so books appear progressively.
-                    var lastWorkCount = data.Books?.Value?.Count ?? 0;
+                    // Poll until complete, writing only the delta each iteration so we don't
+                    // re-log every accumulated book on every new arrival.
+                    var processedIds = new System.Collections.Generic.HashSet<string>(
+                        data.Books?.Value?.Select(b => b.ForeignBookId) ?? System.Linq.Enumerable.Empty<string>());
                     var noProgressSince = DateTime.UtcNow;
 
                     while (data.IsPartial)
@@ -367,14 +370,23 @@ namespace NzbDrone.Core.Books
 
                         System.Threading.Thread.Sleep(3000);
                         data = GetSkyhookData(author.ForeignAuthorId);
-                        updated |= RefreshEntityInfo(author, null, data, true, false, null);
 
-                        var workCount = data.Books?.Value?.Count ?? 0;
-                        if (workCount > lastWorkCount)
+                        var allBooks = data.Books?.Value ?? new System.Collections.Generic.List<Book>();
+                        var newBooks = allBooks.Where(b => !processedIds.Contains(b.ForeignBookId)).ToList();
+
+                        if (newBooks.Any())
                         {
-                            _logger.ProgressInfo("Fetching complete book list for {0} ({1} works so far)…", author.Name, workCount);
-                            lastWorkCount = workCount;
+                            updated |= RefreshEntityInfo(author, null, data, true, false, null);
+
+                            foreach (var b in newBooks)
+                            {
+                                processedIds.Add(b.ForeignBookId);
+                            }
+
                             noProgressSince = DateTime.UtcNow;
+
+                            // Overwrite the last per-book "Updating Info for X" message.
+                            _logger.ProgressInfo("Fetching complete book list for {0} ({1} works so far)…", author.Name, processedIds.Count);
                         }
                     }
                 }

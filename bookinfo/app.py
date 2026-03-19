@@ -178,9 +178,14 @@ async def get_author(author_id: int, background_tasks: BackgroundTasks, kca: str
             return
         _background_in_progress.add(author_id)
 
-        def on_progress(works_by_id: dict) -> None:
-            """Called after each page — update _pending_complete with Partial=True."""
-            intermediate = {**partial, "Works": list(works_by_id.values()), "Partial": True}
+        def on_progress(works_by_id: dict, total_count: int = 0) -> None:
+            """Called after each individual book — update _pending_complete with Partial=True."""
+            intermediate = {
+                **partial,
+                "Works": list(works_by_id.values()),
+                "TotalBookCount": total_count or partial.get("TotalBookCount", 0),
+                "Partial": True,
+            }
             _pending_complete[author_id] = (intermediate, time.monotonic() + PENDING_TTL)
 
         try:

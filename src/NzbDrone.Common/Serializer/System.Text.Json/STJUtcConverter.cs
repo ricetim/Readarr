@@ -15,7 +15,13 @@ namespace NzbDrone.Common.Serializer
                 return default;
             }
 
-            return DateTime.Parse(s).ToUniversalTime();
+            if (DateTime.TryParse(s, null, System.Globalization.DateTimeStyles.RoundtripKind, out var dt))
+            {
+                return dt.ToUniversalTime();
+            }
+
+            // Unparseable dates (e.g. ancient years like "79-01-01T07:00:00Z") — return default
+            return default;
         }
 
         public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)

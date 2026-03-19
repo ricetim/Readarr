@@ -23,9 +23,11 @@ RUN dotnet msbuild src/Readarr.sln \
       -p:TreatWarningsAsErrors=false \
       -t:PublishAllRids
 
-# ── Stage 3: runtime (Alpine, matching faustvii/readarr image style) ──────────
+# ── Stage 3: runtime (Alpine) ─────────────────────────────────────────────────
 FROM alpine:3.22 AS runtime
 
+# Install system packages + Python for bookinfo
+COPY bookinfo/requirements.txt /tmp/bookinfo-requirements.txt
 RUN apk add --no-cache \
       bash \
       ca-certificates \
@@ -34,11 +36,17 @@ RUN apk add --no-cache \
       icu-libs \
       libintl \
       nano \
+      py3-pip \
+      python3 \
       sqlite-libs \
+      supervisor \
       tzdata \
+    && pip3 install --no-cache-dir --break-system-packages \
+         -r /tmp/bookinfo-requirements.txt \
+    && rm /tmp/bookinfo-requirements.txt \
     && addgroup -g 1000 readarr \
     && adduser -u 1000 -G readarr -h /config -s /bin/sh -D readarr \
-    && mkdir -p /app/bin \
+    && mkdir -p /app/bin /app/bookinfo \
     && chown -R readarr:readarr /app
 
 WORKDIR /app
@@ -56,6 +64,8 @@ ENV READARR__UPDATE__BRANCH=${BRANCH}
 COPY --from=backend-builder /src/_output/net6.0/linux-musl-x64/publish/ /app/bin/
 # Copy built frontend
 COPY --from=frontend-builder /src/_output/UI/ /app/bin/UI/
+# Copy bookinfo Python app
+COPY bookinfo/*.py /app/bookinfo/
 
 # Write package_info (matches faustvii convention)
 RUN printf "UpdateMethod=docker\nBranch=%s\nPackageVersion=%s\nPackageAuthor=[%s](https://github.com/%s)\nPackageOwner=%s\nPackageRepo=%s\n" \
@@ -63,6 +73,9 @@ RUN printf "UpdateMethod=docker\nBranch=%s\nPackageVersion=%s\nPackageAuthor=[%s
     > /app/bin/package_info \
     && rm -rf /app/bin/Readarr.Update \
     && rm -f /app/bin/Readarr.Windows.*
+
+# supervisord config
+COPY docker/supervisord.conf /etc/supervisord-readarr.conf
 
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

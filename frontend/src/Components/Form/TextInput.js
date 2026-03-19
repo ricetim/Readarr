@@ -92,8 +92,12 @@ class TextInput extends Component {
     this.selectionChange();
   };
 
-  onKeyUp = () => {
+  onKeyUp = (event) => {
     this.selectionChange();
+
+    if (this.props.onKeyUp) {
+      this.props.onKeyUp(event);
+    }
   };
 
   onMouseDown = () => {

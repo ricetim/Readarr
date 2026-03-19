@@ -60,15 +60,22 @@ class AddNewItem extends Component {
   // Listeners
 
   onSearchInputChange = ({ value }) => {
-    const hasValue = !!value.trim();
+    this.setState({ term: value });
 
-    this.setState({ term: value, isFetching: hasValue }, () => {
-      if (hasValue) {
+    if (!value.trim()) {
+      this.props.onClearSearch();
+    }
+  };
+
+  onSearchInputKeyUp = (event) => {
+    if (event.key === 'Enter') {
+      const value = this.state.term;
+
+      if (value.trim()) {
+        this.setState({ isFetching: true });
         this.props.onSearchChange(value);
-      } else {
-        this.props.onClearSearch();
       }
-    });
+    }
   };
 
   onClearSearchPress = () => {
@@ -107,6 +114,7 @@ class AddNewItem extends Component {
               placeholder={translate('SearchBoxPlaceHolder')}
               autoFocus={true}
               onChange={this.onSearchInputChange}
+              onKeyUp={this.onSearchInputKeyUp}
             />
 
             <Button

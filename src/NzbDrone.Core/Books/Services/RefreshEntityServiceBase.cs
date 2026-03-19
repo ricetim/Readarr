@@ -50,6 +50,10 @@ namespace NzbDrone.Core.Books
         {
             public TEntity Entity { get; set; }
             public List<AuthorMetadata> Metadata { get; set; }
+
+            // When true, Entity is null because the author's data is still paginating.
+            // The base class should silently skip rather than log an error.
+            public bool SkipSilently { get; set; }
         }
 
         protected virtual void LogProgress(TEntity local)
@@ -123,6 +127,11 @@ namespace NzbDrone.Core.Books
 
             if (remote == null)
             {
+                if (data.SkipSilently)
+                {
+                    return false;
+                }
+
                 if (ShouldDelete(local))
                 {
                     _logger.Warn($"{typeof(TEntity).Name} {local} not found in metadata and is being deleted");

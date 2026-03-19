@@ -1,7 +1,2 @@
 #!/usr/bin/env bash
-
-exec \
-    /app/bin/Readarr \
-        --nobrowser \
-        --data=/config \
-        "$@"
+exec /usr/bin/supervisord -c /etc/supervisord-readarr.conf

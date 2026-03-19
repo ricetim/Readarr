@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using NLog;
-using NzbDrone.Common.Instrumentation.Extensions;
 using NzbDrone.Core.Books.Commands;
 using NzbDrone.Core.Books.Events;
 using NzbDrone.Core.Exceptions;
@@ -113,6 +112,14 @@ namespace NzbDrone.Core.Books
 
             if (book == null)
             {
+                // If author data is still partial (bookinfo paginating in background),
+                // skip individual lookup — the book will appear in a future poll.
+                if (data.IsPartial)
+                {
+                    result.SkipSilently = true;
+                    return result;
+                }
+
                 data = GetSkyhookData(local);
                 if (data == null)
                 {
@@ -170,7 +177,7 @@ namespace NzbDrone.Core.Books
 
         protected override void LogProgress(Book local)
         {
-            _logger.ProgressInfo("Updating Info for {0}", local.Title);
+            _logger.Debug("Updating Info for {0}", local.Title);
         }
 
         protected override bool IsMerge(Book local, Book remote)

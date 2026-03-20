@@ -125,6 +125,25 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Identification
 
         private void IdentifyRelease(LocalEdition localBookRelease, IdentificationOverrides idOverrides, ImportDecisionMakerConfig config)
         {
+            if (idOverrides?.Book != null && config.BypassMatchingSpecs)
+            {
+                var edition = idOverrides.Book.Editions.Value
+                                  .FirstOrDefault(e => e.Monitored)
+                              ?? idOverrides.Book.Editions.Value.First();
+
+                localBookRelease.Edition = edition;
+                localBookRelease.Distance = new Distance();
+
+                foreach (var localTrack in localBookRelease.LocalBooks)
+                {
+                    localTrack.Edition = edition;
+                    localTrack.Book = idOverrides.Book;
+                    localTrack.Author = idOverrides.Author;
+                }
+
+                return;
+            }
+
             var watch = System.Diagnostics.Stopwatch.StartNew();
             var usedRemote = false;
 

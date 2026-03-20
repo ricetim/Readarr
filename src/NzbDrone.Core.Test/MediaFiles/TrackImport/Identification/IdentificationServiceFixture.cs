@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using FizzWare.NBuilder;
 using FluentAssertions;
 using FluentValidation.Results;
 using Moq;
@@ -10,6 +11,7 @@ using NUnit.Framework;
 using NzbDrone.Core.Books;
 using NzbDrone.Core.Books.Commands;
 using NzbDrone.Core.Configuration;
+using NzbDrone.Core.Datastore;
 using NzbDrone.Core.ImportLists.Exclusions;
 using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.BookImport;
@@ -177,6 +179,50 @@ namespace NzbDrone.Core.Test.MediaFiles.BookImport.Identification
             var result = _Subject.Identify(tracks, idOverrides, config);
 
             result.Should().HaveCount(testcase.ExpectedMusicBrainzReleaseIds.Count);
+        }
+    }
+
+    [TestFixture]
+    public class IdentificationServiceBypassFixture : CoreTest<IdentificationService>
+    {
+        [Test]
+        public void bypass_matching_specs_skips_identification_pipeline()
+        {
+            // Arrange
+            var author = Builder<Author>.CreateNew().Build();
+            var book = Builder<Book>.CreateNew().Build();
+            var edition = Builder<Edition>.CreateNew()
+                .With(e => e.Monitored = true)
+                .Build();
+            book.Editions = new LazyLoaded<List<Edition>>(new List<Edition> { edition });
+
+            var localBook = Builder<LocalBook>.CreateNew().Build();
+            var localBooks = new List<LocalBook> { localBook };
+
+            var idOverrides = new IdentificationOverrides { Author = author, Book = book };
+            var config = new ImportDecisionMakerConfig
+            {
+                BypassMatchingSpecs = true,
+                SingleRelease = true
+            };
+
+            // Act
+            var results = Subject.Identify(localBooks, idOverrides, config);
+
+            // Assert
+            Mocker.GetMock<ICandidateService>()
+                .Verify(c => c.GetDbCandidatesFromTags(It.IsAny<LocalEdition>(),
+                                                        It.IsAny<IdentificationOverrides>(),
+                                                        It.IsAny<bool>()),
+                        Times.Never());
+
+            results.Should().HaveCount(1);
+            var result = results.First();
+            result.Edition.Should().Be(edition);
+            result.Distance.NormalizedDistance().Should().Be(0.0);
+            localBook.Book.Should().Be(book);
+            localBook.Author.Should().Be(author);
+            localBook.Edition.Should().Be(edition);
         }
     }
 }

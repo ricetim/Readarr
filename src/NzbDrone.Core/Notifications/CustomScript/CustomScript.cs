@@ -55,7 +55,6 @@ namespace NzbDrone.Core.Notifications.CustomScript
             environmentVariables.Add("Readarr_Release_Size", remoteBook.Release.Size.ToString());
             environmentVariables.Add("Readarr_Release_Quality", remoteBook.ParsedBookInfo.Quality.Quality.Name);
             environmentVariables.Add("Readarr_Release_QualityVersion", remoteBook.ParsedBookInfo.Quality.Revision.Version.ToString());
-            environmentVariables.Add("Readarr_Release_ReleaseGroup", string.Empty);
             environmentVariables.Add("Readarr_Release_IndexerFlags", remoteBook.Release.IndexerFlags.ToString());
             environmentVariables.Add("Readarr_Download_Client", message.DownloadClientName ?? string.Empty);
             environmentVariables.Add("Readarr_Download_Client_Type", message.DownloadClientType ?? string.Empty);
@@ -179,7 +178,6 @@ namespace NzbDrone.Core.Notifications.CustomScript
             environmentVariables.Add("Readarr_BookFile_Path", bookFile.Path);
             environmentVariables.Add("Readarr_BookFile_Quality", bookFile.Quality.Quality.Name);
             environmentVariables.Add("Readarr_BookFile_QualityVersion", bookFile.Quality.Revision.Version.ToString());
-            environmentVariables.Add("Readarr_BookFile_ReleaseGroup", bookFile.ReleaseGroup ?? string.Empty);
             environmentVariables.Add("Readarr_BookFile_SceneName", bookFile.SceneName ?? string.Empty);
             environmentVariables.Add("Readarr_BookFile_Edition_Id", edition.Id.ToString());
             environmentVariables.Add("Readarr_BookFile_Edition_Name", edition.Title);
@@ -210,7 +208,6 @@ namespace NzbDrone.Core.Notifications.CustomScript
             environmentVariables.Add("Readarr_BookFile_Path", bookFile.Path);
             environmentVariables.Add("Readarr_BookFile_Quality", bookFile.Quality.Quality.Name);
             environmentVariables.Add("Readarr_BookFile_QualityVersion", bookFile.Quality.Revision.Version.ToString());
-            environmentVariables.Add("Readarr_BookFile_ReleaseGroup", bookFile.ReleaseGroup ?? string.Empty);
             environmentVariables.Add("Readarr_BookFile_SceneName", bookFile.SceneName ?? string.Empty);
             environmentVariables.Add("Readarr_Tags_Diff", message.Diff.ToJson());
             environmentVariables.Add("Readarr_Tags_Scrubbed", message.Scrubbed.ToString());

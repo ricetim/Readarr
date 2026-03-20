@@ -295,7 +295,6 @@ namespace NzbDrone.Core.History
             };
 
             history.Data.Add("Reason", message.Reason.ToString());
-            history.Data.Add("ReleaseGroup", message.BookFile.ReleaseGroup);
             history.Data.Add("IndexerFlags", message.BookFile.IndexerFlags.ToString());
 
             _historyRepository.Insert(history);
@@ -318,7 +317,6 @@ namespace NzbDrone.Core.History
 
             history.Data.Add("SourcePath", sourcePath);
             history.Data.Add("Path", path);
-            history.Data.Add("ReleaseGroup", message.BookFile.ReleaseGroup);
             history.Data.Add("Size", message.BookFile.Size.ToString());
             history.Data.Add("IndexerFlags", message.BookFile.IndexerFlags.ToString());
 

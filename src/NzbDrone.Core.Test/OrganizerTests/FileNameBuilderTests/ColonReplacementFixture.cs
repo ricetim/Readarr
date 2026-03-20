@@ -58,7 +58,7 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
                 .With(s => s.ReleaseDate = new DateTime(2021, 2, 17))
                 .Build();
 
-            _bookFile = new BookFile { Quality = new QualityModel(Quality.EPUB), ReleaseGroup = "ReadarrTest" };
+            _bookFile = new BookFile { Quality = new QualityModel(Quality.EPUB) };
 
             _namingConfig = NamingConfig.Default;
             _namingConfig.RenameBooks = true;

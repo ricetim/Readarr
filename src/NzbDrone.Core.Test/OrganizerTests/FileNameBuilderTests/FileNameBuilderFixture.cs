@@ -72,7 +72,6 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
                 .With(e => e.Part = 1)
                 .With(e => e.PartCount = 1)
                 .With(e => e.Quality = new QualityModel(Quality.MP3))
-                .With(e => e.ReleaseGroup = "ReadarrTest")
                 .With(e => e.MediaInfo = new Parser.Model.MediaInfoModel
                 {
                     AudioBitrate = 320,
@@ -453,15 +452,6 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
         }
 
         [Test]
-        public void should_should_replace_release_group()
-        {
-            _namingConfig.StandardBookFormat = "{Release Group}";
-
-            Subject.BuildBookFileName(_author, _edition, _trackFile)
-                   .Should().Be(_trackFile.ReleaseGroup);
-        }
-
-        [Test]
         public void should_be_able_to_use_original_title()
         {
             _author.Name = "Linkin Park";
@@ -621,40 +611,6 @@ namespace NzbDrone.Core.Test.OrganizerTests.FileNameBuilderTests
 
             Subject.BuildBookFileName(_author, _edition, _trackFile)
                    .Should().Be("30 Rock - S01E01 - Test");
-        }
-
-        [Test]
-        public void should_use_Readarr_as_release_group_when_not_available()
-        {
-            _trackFile.ReleaseGroup = null;
-            _namingConfig.StandardBookFormat = "{Release Group}";
-
-            Subject.BuildBookFileName(_author, _edition, _trackFile)
-                   .Should().Be("Readarr");
-        }
-
-        [TestCase("{Book Title}{-Release Group}", "Hybrid Theory")]
-        [TestCase("{Book Title}{ Release Group}", "Hybrid Theory")]
-        [TestCase("{Book Title}{ [Release Group]}", "Hybrid Theory")]
-        public void should_not_use_Readarr_as_release_group_if_pattern_has_separator(string pattern, string expectedFileName)
-        {
-            _trackFile.ReleaseGroup = null;
-            _namingConfig.StandardBookFormat = pattern;
-
-            Subject.BuildBookFileName(_author, _edition, _trackFile)
-                   .Should().Be(expectedFileName);
-        }
-
-        [TestCase("0SEC")]
-        [TestCase("2HD")]
-        [TestCase("IMMERSE")]
-        public void should_use_existing_casing_for_release_group(string releaseGroup)
-        {
-            _trackFile.ReleaseGroup = releaseGroup;
-            _namingConfig.StandardBookFormat = "{Release Group}";
-
-            Subject.BuildBookFileName(_author, _edition, _trackFile)
-                   .Should().Be(releaseGroup);
         }
     }
 }

@@ -86,11 +86,6 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
 
             _trackFiles.Select(c =>
             {
-                c.ReleaseGroup = "Readarr";
-                return c;
-            }).ToList();
-            _trackFiles.Select(c =>
-            {
                 c.Quality = new QualityModel(Quality.MP3);
                 return c;
             }).ToList();
@@ -113,9 +108,26 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
 
             _trackFiles.Select(c =>
             {
-                c.ReleaseGroup = "Readarr";
+                c.Quality = new QualityModel(Quality.FLAC);
                 return c;
             }).ToList();
+
+            var remoteBook = Builder<RemoteBook>.CreateNew()
+                                                      .With(e => e.ParsedBookInfo = _parsedBookInfo)
+                                                      .With(e => e.Books = _books)
+                                                      .Build();
+
+            Subject.IsSatisfiedBy(remoteBook, null)
+                   .Accepted
+                   .Should()
+                   .BeTrue();
+        }
+
+        [Test]
+        public void should_return_true_if_is_a_repack_regardless_of_group_mix()
+        {
+            _parsedBookInfo.Quality.Revision.IsRepack = true;
+
             _trackFiles.Select(c =>
             {
                 c.Quality = new QualityModel(Quality.FLAC);
@@ -134,22 +146,15 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
         }
 
         [Test]
-        public void should_return_false_if_is_a_repack_for_some_but_not_all_trackfiles()
+        public void should_return_true_if_is_a_repack_for_different_group()
         {
             _parsedBookInfo.Quality.Revision.IsRepack = true;
 
             _trackFiles.Select(c =>
             {
-                c.ReleaseGroup = "Readarr";
-                return c;
-            }).ToList();
-            _trackFiles.Select(c =>
-            {
                 c.Quality = new QualityModel(Quality.FLAC);
                 return c;
             }).ToList();
-
-            _trackFiles.First().ReleaseGroup = "NotReadarr";
 
             var remoteBook = Builder<RemoteBook>.CreateNew()
                                                       .With(e => e.ParsedBookInfo = _parsedBookInfo)
@@ -159,19 +164,14 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
             Subject.IsSatisfiedBy(remoteBook, null)
                    .Accepted
                    .Should()
-                   .BeFalse();
+                   .BeTrue();
         }
 
         [Test]
-        public void should_return_false_if_is_a_repack_for_different_group()
+        public void should_return_true_if_release_group_for_existing_file_is_unknown()
         {
             _parsedBookInfo.Quality.Revision.IsRepack = true;
 
-            _trackFiles.Select(c =>
-            {
-                c.ReleaseGroup = "NotReadarr";
-                return c;
-            }).ToList();
             _trackFiles.Select(c =>
             {
                 c.Quality = new QualityModel(Quality.FLAC);
@@ -186,46 +186,13 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
             Subject.IsSatisfiedBy(remoteBook, null)
                    .Accepted
                    .Should()
-                   .BeFalse();
+                   .BeTrue();
         }
 
         [Test]
-        public void should_return_false_if_release_group_for_existing_file_is_unknown()
+        public void should_return_true_if_release_group_for_release_is_unknown()
         {
             _parsedBookInfo.Quality.Revision.IsRepack = true;
-
-            _trackFiles.Select(c =>
-            {
-                c.ReleaseGroup = "";
-                return c;
-            }).ToList();
-            _trackFiles.Select(c =>
-            {
-                c.Quality = new QualityModel(Quality.FLAC);
-                return c;
-            }).ToList();
-
-            var remoteBook = Builder<RemoteBook>.CreateNew()
-                                                      .With(e => e.ParsedBookInfo = _parsedBookInfo)
-                                                      .With(e => e.Books = _books)
-                                                      .Build();
-
-            Subject.IsSatisfiedBy(remoteBook, null)
-                   .Accepted
-                   .Should()
-                   .BeFalse();
-        }
-
-        [Test]
-        public void should_return_false_if_release_group_for_release_is_unknown()
-        {
-            _parsedBookInfo.Quality.Revision.IsRepack = true;
-
-            _trackFiles.Select(c =>
-            {
-                c.ReleaseGroup = "Readarr";
-                return c;
-            }).ToList();
 
             _trackFiles.Select(c =>
             {
@@ -241,7 +208,7 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
             Subject.IsSatisfiedBy(remoteBook, null)
                    .Accepted
                    .Should()
-                   .BeFalse();
+                   .BeTrue();
         }
 
         [Test]
@@ -250,12 +217,6 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
             Mocker.GetMock<IConfigService>()
             .Setup(s => s.DownloadPropersAndRepacks)
             .Returns(ProperDownloadTypes.DoNotPrefer);
-
-            _trackFiles.Select(c =>
-            {
-                c.ReleaseGroup = "";
-                return c;
-            }).ToList();
 
             _trackFiles.Select(c =>
             {
@@ -282,12 +243,6 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
 
             _trackFiles.Select(c =>
             {
-                c.ReleaseGroup = "Readarr";
-                return c;
-            }).ToList();
-
-            _trackFiles.Select(c =>
-            {
                 c.Quality = new QualityModel(Quality.FLAC);
                 return c;
             }).ToList();
@@ -309,11 +264,6 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
 
             _parsedBookInfo.Quality.Revision.IsRepack = true;
 
-            _trackFiles.Select(c =>
-            {
-                c.ReleaseGroup = "Readarr";
-                return c;
-            }).ToList();
             _trackFiles.Select(c =>
             {
                 c.Quality = new QualityModel(Quality.FLAC);

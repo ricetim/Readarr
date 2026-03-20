@@ -15,7 +15,6 @@ namespace NzbDrone.Core.Notifications.Webhook
         {
             Quality = quality.Quality.Name;
             QualityVersion = quality.Revision.Version;
-            ReleaseGroup = remoteBook.ParsedBookInfo.ReleaseGroup;
             ReleaseTitle = remoteBook.Release.Title;
             Indexer = remoteBook.Release.Indexer;
             Size = remoteBook.Release.Size;

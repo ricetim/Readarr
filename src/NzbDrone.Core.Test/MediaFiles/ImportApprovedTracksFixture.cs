@@ -70,10 +70,7 @@ namespace NzbDrone.Core.Test.MediaFiles
                                            Part = 1,
                                            Path = Path.Combine(author.Path, "Alien Ant Farm - 01 - Pilot.mp3"),
                                            Quality = new QualityModel(Quality.MP3),
-                                           FileTrackInfo = new ParsedTrackInfo
-                                           {
-                                               ReleaseGroup = "DRONE"
-                                           }
+                                           FileTrackInfo = new ParsedTrackInfo()
                                        }));
 
             Mocker.GetMock<IUpgradeMediaFiles>()
@@ -183,10 +180,7 @@ namespace NzbDrone.Core.Test.MediaFiles
                     Path = @"C:\Test\Music\Alien Ant Farm\Alien Ant Farm - 01 - Pilot.mp3".AsOsAgnostic(),
                     Quality = new QualityModel(Quality.AZW3),
                     Size = 1.Megabytes(),
-                    FileTrackInfo = new ParsedTrackInfo
-                    {
-                        ReleaseGroup = "DRONE"
-                    }
+                    FileTrackInfo = new ParsedTrackInfo()
                 });
 
             var all = new List<ImportDecision<LocalBook>>();

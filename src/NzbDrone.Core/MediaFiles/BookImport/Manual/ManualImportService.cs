@@ -245,11 +245,6 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Manual
                         item.Quality = decision.Item.Quality;
                     }
 
-                    if (item.ReleaseGroup.IsNullOrWhiteSpace())
-                    {
-                        item.ReleaseGroup = decision.Item.ReleaseGroup;
-                    }
-
                     item.Rejections = decision.Rejections;
                     item.Size = decision.Item.Size;
 

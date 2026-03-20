@@ -88,7 +88,6 @@ namespace Readarr.Api.V1.Indexers
                 Size = releaseInfo.Size,
                 IndexerId = releaseInfo.IndexerId,
                 Indexer = releaseInfo.Indexer,
-                ReleaseGroup = parsedBookInfo.ReleaseGroup,
                 ReleaseHash = parsedBookInfo.ReleaseHash,
                 Title = releaseInfo.Title,
                 AuthorName = parsedBookInfo.AuthorName,

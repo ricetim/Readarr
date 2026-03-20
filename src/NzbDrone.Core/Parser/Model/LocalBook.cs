@@ -27,7 +27,6 @@ namespace NzbDrone.Core.Parser.Model
         public bool ExistingFile { get; set; }
         public bool AdditionalFile { get; set; }
         public bool SceneSource { get; set; }
-        public string ReleaseGroup { get; set; }
         public string SceneName { get; set; }
 
         public override string ToString()

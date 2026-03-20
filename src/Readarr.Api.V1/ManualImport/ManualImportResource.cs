@@ -49,7 +49,6 @@ namespace Readarr.Api.V1.ManualImport
                 Book = model.Book.ToResource(),
                 ForeignEditionId = model.Edition?.ForeignEditionId ?? model.Book?.Editions.Value.Single(x => x.Monitored).ForeignEditionId,
                 Quality = model.Quality,
-                ReleaseGroup = model.ReleaseGroup,
 
                 //QualityWeight
                 DownloadId = model.DownloadId,

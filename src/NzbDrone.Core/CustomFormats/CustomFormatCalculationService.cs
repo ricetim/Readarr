@@ -65,7 +65,6 @@ namespace NzbDrone.Core.CustomFormats
                 AuthorName = author.Name,
                 ReleaseTitle = parsed?.ReleaseTitle ?? blocklist.SourceTitle,
                 Quality = blocklist.Quality,
-                ReleaseGroup = parsed?.ReleaseGroup
             };
 
             var input = new CustomFormatInput
@@ -91,7 +90,6 @@ namespace NzbDrone.Core.CustomFormats
                 AuthorName = author.Name,
                 ReleaseTitle = parsed?.ReleaseTitle ?? history.SourceTitle,
                 Quality = history.Quality,
-                ReleaseGroup = parsed?.ReleaseGroup,
             };
 
             var input = new CustomFormatInput
@@ -112,7 +110,6 @@ namespace NzbDrone.Core.CustomFormats
                 AuthorName = localBook.Author.Name,
                 ReleaseTitle = localBook.SceneName,
                 Quality = localBook.Quality,
-                ReleaseGroup = localBook.ReleaseGroup
             };
 
             var input = new CustomFormatInput
@@ -179,7 +176,6 @@ namespace NzbDrone.Core.CustomFormats
                 AuthorName = author.Name,
                 ReleaseTitle = releaseTitle,
                 Quality = bookFile.Quality,
-                ReleaseGroup = bookFile.ReleaseGroup
             };
 
             var input = new CustomFormatInput

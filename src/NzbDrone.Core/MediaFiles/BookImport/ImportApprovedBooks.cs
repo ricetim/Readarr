@@ -193,7 +193,6 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                         Size = localTrack.Size,
                         Modified = localTrack.Modified,
                         DateAdded = DateTime.UtcNow,
-                        ReleaseGroup = localTrack.ReleaseGroup,
                         Quality = localTrack.Quality,
                         MediaInfo = localTrack.FileTrackInfo.MediaInfo,
                         EditionId = localTrack.Edition.Id,

@@ -19,7 +19,6 @@ namespace NzbDrone.Core.Parser
             var parsedTitle = Parser.ParseTitle(title);
 
             if (parsedTitle == null ||
-                parsedTitle.ReleaseGroup == null ||
                 parsedTitle.Quality.Quality == Qualities.Quality.Unknown ||
                 string.IsNullOrWhiteSpace(parsedTitle.AuthorTitle))
             {

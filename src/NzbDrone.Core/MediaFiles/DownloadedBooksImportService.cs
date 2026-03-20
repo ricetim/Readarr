@@ -182,7 +182,6 @@ namespace NzbDrone.Core.MediaFiles
                     BookTitle = folderInfo.BookTitle,
                     Authors = new List<string> { folderInfo.AuthorName },
                     Quality = folderInfo.Quality,
-                    ReleaseGroup = folderInfo.ReleaseGroup,
                     ReleaseHash = folderInfo.ReleaseHash,
                 };
             }

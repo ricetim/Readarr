@@ -187,18 +187,8 @@ namespace NzbDrone.Core.Parser
         private static readonly Regex SixDigitAirDateRegex = new Regex(@"(?<=[_.-])(?<airdate>(?<!\d)(?<airyear>[1-9]\d{1})(?<airmonth>[0-1][0-9])(?<airday>[0-3][0-9]))(?=[_.-])",
                                                                 RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
-        private static readonly RegexReplace CleanReleaseGroupRegex = new RegexReplace(@"^(.*?[-._ ])|(-(RP|1|NZBGeek|Obfuscated|Scrambled|sample|Pre|postbot|xpost|Rakuv[a-z0-9]*|WhiteRev|BUYMORE|AsRequested|AlternativeToRequested|GEROV|Z0iDS3N|Chamele0n|4P|4Planet))+$",
-                                                                string.Empty,
-                                                                RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
         private static readonly RegexReplace CleanTorrentSuffixRegex = new RegexReplace(@"\[(?:ettv|rartv|rarbg|cttv)\]$",
                                                                 string.Empty,
-                                                                RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        private static readonly Regex ReleaseGroupRegex = new Regex(@"-(?<releasegroup>[a-z0-9]+)(?<!MP3|ALAC|FLAC|WEB)(?:\b|[-._ ])",
-                                                                RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-        private static readonly Regex AnimeReleaseGroupRegex = new Regex(@"^(?:\[(?<subgroup>(?!\s).+?(?<!\s))\](?:_|-|\s|\.)?)",
                                                                 RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
         private static readonly Regex YearInTitleRegex = new Regex(@"^(?<title>.+?)(?:\W|_)?(?<year>\d{4})",
@@ -394,10 +384,6 @@ namespace NzbDrone.Core.Parser
                     result.Quality = QualityParser.ParseQuality(title);
                     Logger.Debug("Quality parsed: {0}", result.Quality);
 
-                    result.ReleaseGroup = ParseReleaseGroup(releaseTitle);
-
-                    Logger.Debug("Release Group parsed: {0}", result.ReleaseGroup);
-
                     return result;
                 }
                 catch (InvalidDateException ex)
@@ -498,16 +484,6 @@ namespace NzbDrone.Core.Parser
                             {
                                 result.Quality = QualityParser.ParseQuality(title);
                                 Logger.Debug("Quality parsed: {0}", result.Quality);
-
-                                result.ReleaseGroup = ParseReleaseGroup(releaseTitle);
-
-                                var subGroup = GetSubGroup(match);
-                                if (!subGroup.IsNullOrWhiteSpace())
-                                {
-                                    result.ReleaseGroup = subGroup;
-                                }
-
-                                Logger.Debug("Release Group parsed: {0}", result.ReleaseGroup);
 
                                 result.ReleaseHash = GetReleaseHash(match);
                                 if (!result.ReleaseHash.IsNullOrWhiteSpace())
@@ -625,38 +601,6 @@ namespace NzbDrone.Core.Parser
             title = DuplicateSpacesRegex.Replace(title, " ");
 
             return title.Trim().ToLower();
-        }
-
-        public static string ParseReleaseGroup(string title)
-        {
-            title = title.Trim();
-            title = RemoveFileExtension(title);
-            title = WebsitePrefixRegex.Replace(title);
-
-            var animeMatch = AnimeReleaseGroupRegex.Match(title);
-
-            if (animeMatch.Success)
-            {
-                return animeMatch.Groups["subgroup"].Value;
-            }
-
-            title = CleanReleaseGroupRegex.Replace(title);
-
-            var matches = ReleaseGroupRegex.Matches(title);
-
-            if (matches.Count != 0)
-            {
-                var group = matches.OfType<Match>().Last().Groups["releasegroup"].Value;
-
-                if (int.TryParse(group, out _))
-                {
-                    return null;
-                }
-
-                return group;
-            }
-
-            return null;
         }
 
         public static string RemoveFileExtension(string title)
@@ -852,18 +796,6 @@ namespace NzbDrone.Core.Parser
             }
 
             return true;
-        }
-
-        private static string GetSubGroup(MatchCollection matchCollection)
-        {
-            var subGroup = matchCollection[0].Groups["subgroup"];
-
-            if (subGroup.Success)
-            {
-                return subGroup.Value;
-            }
-
-            return string.Empty;
         }
 
         private static string GetReleaseHash(MatchCollection matchCollection)

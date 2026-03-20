@@ -35,8 +35,7 @@ namespace NzbDrone.Core.Test.MediaFiles.BookImport
                 Author = series,
                 Book = episode,
                 Path = Path.Combine(series.Path, "01 Some Body Loves.mkv"),
-                Quality = new QualityModel(Quality.FLAC),
-                ReleaseGroup = "DRONE"
+                Quality = new QualityModel(Quality.FLAC)
             };
         }
 

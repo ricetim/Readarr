@@ -29,7 +29,6 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
             _parsedBookInfo = Builder<ParsedBookInfo>.CreateNew()
                                                            .With(p => p.Quality = new QualityModel(Quality.FLAC,
                                                                new Revision(2, 0, false)))
-                                                           .With(p => p.ReleaseGroup = "Readarr")
                                                            .Build();
 
             _books = Builder<Book>.CreateListOfSize(1)
@@ -221,7 +220,6 @@ namespace NzbDrone.Core.Test.DecisionEngineTests
         public void should_return_false_if_release_group_for_release_is_unknown()
         {
             _parsedBookInfo.Quality.Revision.IsRepack = true;
-            _parsedBookInfo.ReleaseGroup = null;
 
             _trackFiles.Select(c =>
             {

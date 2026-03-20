@@ -57,8 +57,6 @@ namespace NzbDrone.Core.Download.Clients.Flood
                         case (int)AdditionalTags.Format:
                             result.Add(remoteBook.ParsedBookInfo.Quality.Quality.ToString());
                             break;
-                        case (int)AdditionalTags.ReleaseGroup:
-                            break;
                         case (int)AdditionalTags.Year:
                             result.UnionWith(remoteBook.Books.ConvertAll(book => book.ReleaseDate.Value.Year.ToString()));
                             break;

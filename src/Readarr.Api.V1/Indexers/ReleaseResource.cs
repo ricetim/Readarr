@@ -22,7 +22,6 @@ namespace Readarr.Api.V1.Indexers
         public long Size { get; set; }
         public int IndexerId { get; set; }
         public string Indexer { get; set; }
-        public string ReleaseGroup { get; set; }
         public string SubGroup { get; set; }
         public string ReleaseHash { get; set; }
         public string Title { get; set; }

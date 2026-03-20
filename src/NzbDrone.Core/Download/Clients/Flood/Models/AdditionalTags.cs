@@ -10,9 +10,6 @@ namespace NzbDrone.Core.Download.Clients.Flood.Models
         [FieldOption(Hint = "EPUB")]
         Format = 1,
 
-        [FieldOption(Hint = "Example-Raws")]
-        ReleaseGroup = 2,
-
         [FieldOption(Hint = "1954")]
         Year = 3,
 

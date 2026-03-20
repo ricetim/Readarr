@@ -19,7 +19,6 @@ namespace Readarr.Api.V1.ManualImport
         public BookResource Book { get; set; }
         public string ForeignEditionId { get; set; }
         public QualityModel Quality { get; set; }
-        public string ReleaseGroup { get; set; }
         public int QualityWeight { get; set; }
         public string DownloadId { get; set; }
         public int IndexerFlags { get; set; }

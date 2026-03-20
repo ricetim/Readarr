@@ -5,6 +5,7 @@ using Moq;
 using NUnit.Framework;
 using NzbDrone.Common.Disk;
 using NzbDrone.Core.Books;
+using NzbDrone.Core.Datastore;
 using NzbDrone.Core.DecisionEngine;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.Download.TrackedDownloads;
@@ -402,9 +403,18 @@ namespace NzbDrone.Core.Test.Download.CompletedDownloadServiceTests
 
         private void GivenBook(int bookId, Book book)
         {
-            Mocker.GetMock<IBookService>()
-                .Setup(s => s.GetBook(bookId))
-                .Returns(book);
+            if (book == null)
+            {
+                Mocker.GetMock<IBookService>()
+                    .Setup(s => s.GetBook(bookId))
+                    .Throws(new ModelNotFoundException(typeof(Book), bookId));
+            }
+            else
+            {
+                Mocker.GetMock<IBookService>()
+                    .Setup(s => s.GetBook(bookId))
+                    .Returns(book);
+            }
         }
 
         [Test]

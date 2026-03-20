@@ -7,6 +7,7 @@ using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Instrumentation.Extensions;
 using NzbDrone.Core.Books;
+using NzbDrone.Core.Datastore;
 using NzbDrone.Core.Download.TrackedDownloads;
 using NzbDrone.Core.History;
 using NzbDrone.Core.MediaFiles;
@@ -102,7 +103,17 @@ namespace NzbDrone.Core.Download
                     .Where(h => h.EventType == EntityHistoryEventType.Grabbed)
                     .Select(h => h.BookId)
                     .FirstOrDefault();
-                bookOverride = bookId > 0 ? _bookService.GetBook(bookId) : null;
+                if (bookId > 0)
+                {
+                    try
+                    {
+                        bookOverride = _bookService.GetBook(bookId);
+                    }
+                    catch (ModelNotFoundException)
+                    {
+                        bookOverride = null;
+                    }
+                }
             }
 
             var importResults = _downloadedTracksImportService.ProcessPath(outputPath, ImportMode.Auto, trackedDownload.RemoteBook?.Author, trackedDownload.DownloadItem, bookOverride);

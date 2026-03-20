@@ -158,6 +158,8 @@ namespace NzbDrone.Core.Download.TrackedDownloads
                     var grabbedEvent = historyItems.FirstOrDefault(v => v.EventType == EntityHistoryEventType.Grabbed);
 
                     trackedDownload.Indexer = grabbedEvent?.Data?.GetValueOrDefault("indexer");
+                    trackedDownload.IsManualGrab =
+                        grabbedEvent?.Data?.GetValueOrDefault("ReleaseSource") == "InteractiveSearch";
 
                     if (parsedBookInfo == null ||
                         trackedDownload.RemoteBook?.Author == null ||

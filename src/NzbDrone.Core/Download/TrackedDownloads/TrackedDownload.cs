@@ -15,6 +15,7 @@ namespace NzbDrone.Core.Download.TrackedDownloads
         public DownloadProtocol Protocol { get; set; }
         public string Indexer { get; set; }
         public bool IsTrackable { get; set; }
+        public bool IsManualGrab { get; set; }
 
         public TrackedDownload()
         {

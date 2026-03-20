@@ -194,6 +194,138 @@ namespace NzbDrone.Core.Test.Download.TrackedDownloads
         }
 
         [Test]
+        public void should_set_is_manual_grab_when_release_source_is_interactive_search()
+        {
+            Mocker.GetMock<IHistoryService>()
+                .Setup(s => s.FindByDownloadId(It.Is<string>(sr => sr == "35238")))
+                .Returns(new List<EntityHistory>()
+                {
+                    new EntityHistory()
+                    {
+                        DownloadId = "35238",
+                        SourceTitle = "Audio Author - Audio Book [2018 - FLAC]",
+                        AuthorId = 5,
+                        BookId = 4,
+                        EventType = EntityHistoryEventType.Grabbed,
+                        Data = new Dictionary<string, string>
+                        {
+                            { "ReleaseSource", "InteractiveSearch" }
+                        }
+                    }
+                });
+
+            var client = new DownloadClientDefinition()
+            {
+                Id = 1,
+                Protocol = DownloadProtocol.Torrent
+            };
+
+            var item = new DownloadClientItem()
+            {
+                Title = "Audio Author - Audio Book [2018 - FLAC]",
+                DownloadId = "35238",
+                DownloadClientInfo = new DownloadClientItemClientInfo
+                {
+                    Protocol = client.Protocol,
+                    Id = client.Id,
+                    Name = client.Name
+                }
+            };
+
+            var trackedDownload = Subject.TrackDownload(client, item);
+
+            trackedDownload.Should().NotBeNull();
+            trackedDownload.IsManualGrab.Should().BeTrue();
+        }
+
+        [Test]
+        public void should_not_set_is_manual_grab_when_release_source_is_search()
+        {
+            Mocker.GetMock<IHistoryService>()
+                .Setup(s => s.FindByDownloadId(It.Is<string>(sr => sr == "35238")))
+                .Returns(new List<EntityHistory>()
+                {
+                    new EntityHistory()
+                    {
+                        DownloadId = "35238",
+                        SourceTitle = "Audio Author - Audio Book [2018 - FLAC]",
+                        AuthorId = 5,
+                        BookId = 4,
+                        EventType = EntityHistoryEventType.Grabbed,
+                        Data = new Dictionary<string, string>
+                        {
+                            { "ReleaseSource", "Search" }
+                        }
+                    }
+                });
+
+            var client = new DownloadClientDefinition()
+            {
+                Id = 1,
+                Protocol = DownloadProtocol.Torrent
+            };
+
+            var item = new DownloadClientItem()
+            {
+                Title = "Audio Author - Audio Book [2018 - FLAC]",
+                DownloadId = "35238",
+                DownloadClientInfo = new DownloadClientItemClientInfo
+                {
+                    Protocol = client.Protocol,
+                    Id = client.Id,
+                    Name = client.Name
+                }
+            };
+
+            var trackedDownload = Subject.TrackDownload(client, item);
+
+            trackedDownload.Should().NotBeNull();
+            trackedDownload.IsManualGrab.Should().BeFalse();
+        }
+
+        [Test]
+        public void should_not_set_is_manual_grab_when_release_source_key_is_missing()
+        {
+            Mocker.GetMock<IHistoryService>()
+                .Setup(s => s.FindByDownloadId(It.Is<string>(sr => sr == "35238")))
+                .Returns(new List<EntityHistory>()
+                {
+                    new EntityHistory()
+                    {
+                        DownloadId = "35238",
+                        SourceTitle = "Audio Author - Audio Book [2018 - FLAC]",
+                        AuthorId = 5,
+                        BookId = 4,
+                        EventType = EntityHistoryEventType.Grabbed,
+                        Data = new Dictionary<string, string>()
+                    }
+                });
+
+            var client = new DownloadClientDefinition()
+            {
+                Id = 1,
+                Protocol = DownloadProtocol.Torrent
+            };
+
+            var item = new DownloadClientItem()
+            {
+                Title = "Audio Author - Audio Book [2018 - FLAC]",
+                DownloadId = "35238",
+                DownloadClientInfo = new DownloadClientItemClientInfo
+                {
+                    Protocol = client.Protocol,
+                    Id = client.Id,
+                    Name = client.Name
+                }
+            };
+
+            var trackedDownload = Subject.TrackDownload(client, item);
+
+            trackedDownload.Should().NotBeNull();
+            trackedDownload.IsManualGrab.Should().BeFalse();
+        }
+
+        [Test]
         public void should_not_throw_when_processing_deleted_series()
         {
             GivenDownloadHistory();

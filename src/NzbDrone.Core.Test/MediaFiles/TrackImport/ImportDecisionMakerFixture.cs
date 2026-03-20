@@ -368,6 +368,7 @@ namespace NzbDrone.Core.Test.MediaFiles.BookImport
         [Test]
         public void bypass_matching_specs_skips_book_specifications()
         {
+            GivenAugmentationSuccess();
             GivenSpecifications(_bookfail1);
 
             var config = new ImportDecisionMakerConfig { BypassMatchingSpecs = true };

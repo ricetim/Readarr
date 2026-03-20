@@ -15,78 +15,68 @@ namespace NzbDrone.Core.Test.ParserTests
             {
                 @"C:\Test\Some.Hashed.Release.(256kbps)-Mercury\0e895c37245186812cb08aab1529cf8ee389dd05.mp3".AsOsAgnostic(),
                 "Some Hashed Release",
-                Quality.MP3,
-                "Mercury"
+                Quality.MP3
             },
             new object[]
             {
                 @"C:\Test-[256]\0e895c37245186812cb08aab1529cf8ee389dd05\Some.Hashed.Release.S01E01.720p.WEB-DL.AAC2.0.H.264-Mercury.mp3".AsOsAgnostic(),
                 "Some Hashed Release",
-                Quality.MP3,
-                "Mercury"
+                Quality.MP3
             },
             new object[]
             {
                 @"C:\Test\Fake.Dir.S01E01-Test\yrucreM-462.H.0.2CAA.LD-BEW.p027.10E10S.esaeleR.dehsaH.emoS.mp3".AsOsAgnostic(),
                 "Some Hashed Release",
-                Quality.MP3,
-                "Mercury"
+                Quality.MP3
             },
             new object[]
             {
                 @"C:\Test\Fake.Dir.S01E01-Test\yrucreM-LN 1.5DD LD-BEW P0801 10E10S esaeleR dehsaH emoS.mp3".AsOsAgnostic(),
                 "Some Hashed Release",
-                Quality.MP3,
-                "Mercury"
+                Quality.MP3
             },
             new object[]
             {
                 @"C:\Test\Weeds.S01E10.DVDRip.XviD-Readarr\AHFMZXGHEWD660.mp3".AsOsAgnostic(),
                 "Weeds",
-                Quality.MP3,
-                "Readarr"
+                Quality.MP3
             },
             new object[]
             {
                 @"C:\Test\Deadwood.S02E12.1080p.BluRay.x264-Readarr\Backup_72023S02-12.mp3".AsOsAgnostic(),
                 "Deadwood",
-                Quality.MP3,
-                null
+                Quality.MP3
             },
             new object[]
             {
                 @"C:\Test\Grimm S04E08 Chupacabra 720p WEB-DL DD5 1 H 264-ECI\123.mp3".AsOsAgnostic(),
                 "Grimm",
-                Quality.MP3,
-                "ECI"
+                Quality.MP3
             },
             new object[]
             {
                 @"C:\Test\Grimm S04E08 Chupacabra 720p WEB-DL DD5 1 H 264-ECI\abc.mp3".AsOsAgnostic(),
                 "Grimm",
-                Quality.MP3,
-                "ECI"
+                Quality.MP3
             },
             new object[]
             {
                 @"C:\Test\Grimm S04E08 Chupacabra 720p WEB-DL DD5 1 H 264-ECI\b00bs.mp3".AsOsAgnostic(),
                 "Grimm",
-                Quality.MP3,
-                "ECI"
+                Quality.MP3
             },
             new object[]
             {
                 @"C:\Test\The.Good.Wife.S02E23.720p.HDTV.x264-NZBgeek/cgajsofuejsa501.mp3".AsOsAgnostic(),
                 "The Good Wife",
-                Quality.MP3,
-                "NZBgeek"
+                Quality.MP3
             }
         };
 
         [Test]
         [TestCaseSource(nameof(HashedReleaseParserCases))]
         [Ignore("Hashed code is not currently called with track parsing")]
-        public void should_properly_parse_hashed_releases(string path, string title, Quality quality, string releaseGroup)
+        public void should_properly_parse_hashed_releases(string path, string title, Quality quality)
         {
             var result = Parser.Parser.ParseMusicPath(path);
 

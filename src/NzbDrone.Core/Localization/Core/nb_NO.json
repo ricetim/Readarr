@@ -126,7 +126,6 @@
     "RemotePathMappings": "Ekstern portmapping",
     "AddList": "Legg til liste",
     "ChooseImportMethod": "Velg importeringsmodus",
-    "ClickToChangeReleaseGroup": "Klikk for å endre utgivelsegruppe",
     "ApplicationURL": "Applikasjon URL",
     "ApplicationUrlHelpText": "Denne applikasjonens eksterne URL inkludert http(s)://, port og URL base",
     "CloneCustomFormat": "Klon egendefinert format",

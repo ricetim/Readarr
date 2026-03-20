@@ -93,7 +93,6 @@
     "ChmodFolder": "chmod Mapa",
     "ChmodFolderHelpText": "Octal, primjenjeno na dokumentima i mapama tijekom uvoza/promjene imena (bez izvršnih bitova)",
     "ClickToChangeQuality": "Klikni za promjenu kvalitete",
-    "ClickToChangeReleaseGroup": "Klikni za promjenu grupe verzije",
     "ClientPriority": "Prioritet Klijenata",
     "CloneProfile": "Kloniraj Profil",
     "Close": "Zatvori",

@@ -405,6 +405,7 @@ namespace NzbDrone.Core.Test.MediaFiles.BookImport
 
             result.Should().HaveCount(1);
             result.First().Approved.Should().BeFalse();
+            _fail1.Verify(c => c.IsSatisfiedBy(It.IsAny<LocalBook>(), It.IsAny<DownloadClientItem>()), Times.Once());
         }
 
         [Test]

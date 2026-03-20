@@ -11,13 +11,15 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Aggregation.Aggregators
 {
     public class AggregateFilenameInfo : IAggregate<LocalEdition>
     {
-        private readonly Logger _logger;
+        private const double FolderConsistencyThreshold = 0.80;
 
         private static readonly List<Tuple<string, string>> CharsAndSeps = new List<Tuple<string, string>>
         {
-            Tuple.Create(@"a-z0-9,\(\)\.&'’\s", @"\s_-"),
-            Tuple.Create(@"a-z0-9,\(\)\.\&'’_", @"\s-")
+            Tuple.Create(@"a-z0-9,\(\)\.&’’\s", @"\s_-"),
+            Tuple.Create(@"a-z0-9,\(\)\.\&’’_", @"\s-")
         };
+
+        private readonly Logger _logger;
 
         private static Regex[] Patterns(string chars, string sep)
         {
@@ -74,6 +76,8 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Aggregation.Aggregators
                     }
                 }
             }
+
+            ApplyFolderStructureOverride(tracks);
 
             return release;
         }
@@ -183,6 +187,118 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Aggregation.Aggregators
                     _logger.Debug("Got track number from filename: {0}", tracknum);
                     track.FileTrackInfo.TrackNumbers = new[] { tracknum };
                 }
+            }
+        }
+
+        private void ApplyFolderStructureOverride(List<LocalBook> tracks)
+        {
+            if (!tracks.Any())
+            {
+                return;
+            }
+
+            // All tracks must share one immediate parent directory
+            var dirs = tracks.Select(t => Path.GetDirectoryName(t.Path)).Distinct().ToList();
+            if (dirs.Count != 1)
+            {
+                _logger.Debug("Tracks span multiple directories, skipping folder structure override");
+                return;
+            }
+
+            var titleFolder = Path.GetFileName(dirs[0]);
+            var authorFolder = Path.GetFileName(Path.GetDirectoryName(dirs[0]));
+
+            if (titleFolder.IsNullOrWhiteSpace() || authorFolder.IsNullOrWhiteSpace())
+            {
+                return;
+            }
+
+            // Find the first regex pattern that parses every filename with both author and title groups
+            string fileAuthor = null;
+            string fileTitle = null;
+
+            foreach (var charSep in CharsAndSeps)
+            {
+                foreach (var pattern in Patterns(charSep.Item1, charSep.Item2))
+                {
+                    var keys = pattern.GetGroupNames();
+                    if (!keys.Contains("author") || !keys.Contains("title"))
+                    {
+                        continue;
+                    }
+
+                    var matches = AllMatches(tracks, pattern);
+                    if (matches == null)
+                    {
+                        continue;
+                    }
+
+                    var someMatch = matches.First().Value;
+
+                    if (EqualFields(matches.Values, "author"))
+                    {
+                        fileAuthor = someMatch.Groups["author"].Value.Trim();
+                        fileTitle = someMatch.Groups["title"].Value.Trim();
+                    }
+                    else if (EqualFields(matches.Values, "title"))
+                    {
+                        fileAuthor = someMatch.Groups["title"].Value.Trim();
+                        fileTitle = someMatch.Groups["author"].Value.Trim();
+                    }
+                    else
+                    {
+                        continue;
+                    }
+
+                    break;
+                }
+
+                if (fileAuthor != null)
+                {
+                    break;
+                }
+            }
+
+            if (fileAuthor == null || fileTitle == null)
+            {
+                _logger.Debug("Could not parse author/title from filenames, skipping folder structure override");
+                return;
+            }
+
+            var titleFolderNorm = titleFolder.RemoveAccent().ToLowerInvariant();
+            var authorFolderNorm = authorFolder.RemoveAccent().ToLowerInvariant();
+            var fileTitleNorm = fileTitle.RemoveAccent().ToLowerInvariant();
+            var fileAuthorNorm = fileAuthor.RemoveAccent().ToLowerInvariant();
+
+            var titleConsistency = titleFolderNorm.LevenshteinCoefficient(fileTitleNorm);
+            var authorConsistency = authorFolderNorm.LevenshteinCoefficient(fileAuthorNorm);
+
+            _logger.Debug(
+                "Folder structure consistency — title: {0:F2} ({1} vs {2}), author: {3:F2} ({4} vs {5})",
+                titleConsistency,
+                titleFolder,
+                fileTitle,
+                authorConsistency,
+                authorFolder,
+                fileAuthor);
+
+            if (titleConsistency < FolderConsistencyThreshold || authorConsistency < FolderConsistencyThreshold)
+            {
+                _logger.Debug(
+                    "Folder structure inconsistent with filenames (threshold: {0:F2}), skipping override",
+                    FolderConsistencyThreshold);
+                return;
+            }
+
+            _logger.Debug(
+                "Folder structure consistent with filenames — overriding tags: author={0}, title={1}",
+                authorFolder,
+                titleFolder);
+
+            foreach (var track in tracks)
+            {
+                track.FileTrackInfo.Authors = new List<string> { authorFolder };
+                track.FileTrackInfo.BookTitle = titleFolder;
             }
         }
     }

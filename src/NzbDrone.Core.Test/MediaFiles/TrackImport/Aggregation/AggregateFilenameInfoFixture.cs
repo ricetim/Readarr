@@ -188,5 +188,129 @@ namespace NzbDrone.Core.Test.MediaFiles.BookImport.Aggregation.Aggregators
 
             VerifyDataAuto(release.LocalBooks, testcase.Item1, testcase.Item3);
         }
+
+        private LocalEdition GivenTracksWithWrongTags(List<string> files, string root, string wrongAuthor, string wrongTitle)
+        {
+            var tracks = files.Select(x => new LocalBook
+            {
+                Path = Path.Combine(root, x),
+                FileTrackInfo = new ParsedTrackInfo
+                {
+                    TrackNumbers = new[] { 0 },
+                    Authors = new List<string> { wrongAuthor },
+                    BookTitle = wrongTitle,
+                }
+            }).ToList();
+            return new LocalEdition(tracks);
+        }
+
+        [Test]
+        public void should_override_tags_when_folder_and_filename_agree()
+        {
+            var root = @"C:\Audiobooks\Brandon Sanderson\Mistborn".AsOsAgnostic();
+            var release = GivenTracksWithWrongTags(
+                new List<string> { "Brandon Sanderson - Mistborn.mp3" },
+                root,
+                wrongAuthor: "Michael Kramer",
+                wrongTitle: "The Stormlight Archive");
+
+            Subject.Aggregate(release, true);
+
+            release.LocalBooks[0].FileTrackInfo.AuthorTitle.Should().Be("Brandon Sanderson");
+            release.LocalBooks[0].FileTrackInfo.BookTitle.Should().Be("Mistborn");
+        }
+
+        [Test]
+        public void should_override_tags_for_multifile_release_when_folder_and_filename_agree()
+        {
+            var root = @"C:\Audiobooks\Brandon Sanderson\Mistborn".AsOsAgnostic();
+            var release = GivenTracksWithWrongTags(
+                new List<string>
+                {
+                    "Brandon Sanderson - Mistborn - 01.mp3",
+                    "Brandon Sanderson - Mistborn - 02.mp3",
+                    "Brandon Sanderson - Mistborn - 03.mp3",
+                },
+                root,
+                wrongAuthor: "Michael Kramer",
+                wrongTitle: "The Stormlight Archive");
+
+            Subject.Aggregate(release, true);
+
+            foreach (var track in release.LocalBooks)
+            {
+                track.FileTrackInfo.AuthorTitle.Should().Be("Brandon Sanderson");
+                track.FileTrackInfo.BookTitle.Should().Be("Mistborn");
+            }
+        }
+
+        [Test]
+        public void should_not_override_when_title_folder_does_not_match_filename_title()
+        {
+            var root = @"C:\Audiobooks\Brandon Sanderson\Mistborn".AsOsAgnostic();
+            var release = GivenTracksWithWrongTags(
+                new List<string> { "Brandon Sanderson - Fellowship of the Ring.mp3" },
+                root,
+                wrongAuthor: "Brandon Sanderson",
+                wrongTitle: "Wrong Title");
+
+            Subject.Aggregate(release, true);
+
+            release.LocalBooks[0].FileTrackInfo.AuthorTitle.Should().Be("Brandon Sanderson");
+            release.LocalBooks[0].FileTrackInfo.BookTitle.Should().Be("Wrong Title");
+        }
+
+        [Test]
+        public void should_not_override_when_author_folder_does_not_match_filename_author()
+        {
+            var root = @"C:\Audiobooks\Patrick Rothfuss\Mistborn".AsOsAgnostic();
+            var release = GivenTracksWithWrongTags(
+                new List<string> { "Brandon Sanderson - Mistborn.mp3" },
+                root,
+                wrongAuthor: "Michael Kramer",
+                wrongTitle: "Wrong Title");
+
+            Subject.Aggregate(release, true);
+
+            release.LocalBooks[0].FileTrackInfo.AuthorTitle.Should().Be("Michael Kramer");
+            release.LocalBooks[0].FileTrackInfo.BookTitle.Should().Be("Wrong Title");
+        }
+
+        [Test]
+        public void should_not_override_when_files_span_multiple_directories()
+        {
+            var tracks = new List<LocalBook>
+            {
+                new LocalBook
+                {
+                    Path = @"C:\Audiobooks\Brandon Sanderson\Mistborn\Disc 1\file1.mp3".AsOsAgnostic(),
+                    FileTrackInfo = new ParsedTrackInfo
+                    {
+                        TrackNumbers = new[] { 0 },
+                        Authors = new List<string> { "Michael Kramer" },
+                        BookTitle = "Wrong Title",
+                    }
+                },
+                new LocalBook
+                {
+                    Path = @"C:\Audiobooks\Brandon Sanderson\Mistborn\Disc 2\file2.mp3".AsOsAgnostic(),
+                    FileTrackInfo = new ParsedTrackInfo
+                    {
+                        TrackNumbers = new[] { 0 },
+                        Authors = new List<string> { "Michael Kramer" },
+                        BookTitle = "Wrong Title",
+                    }
+                }
+            };
+            var release = new LocalEdition(tracks);
+
+            Subject.Aggregate(release, true);
+
+            foreach (var track in release.LocalBooks)
+            {
+                track.FileTrackInfo.AuthorTitle.Should().Be("Michael Kramer");
+                track.FileTrackInfo.BookTitle.Should().Be("Wrong Title");
+            }
+        }
     }
 }

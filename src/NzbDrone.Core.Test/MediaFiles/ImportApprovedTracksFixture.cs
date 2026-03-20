@@ -6,6 +6,7 @@ using FluentAssertions;
 using Moq;
 using NUnit.Framework;
 using NzbDrone.Core.Books;
+using NzbDrone.Core.Configuration;
 using NzbDrone.Core.DecisionEngine;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.MediaFiles;
@@ -244,6 +245,22 @@ namespace NzbDrone.Core.Test.MediaFiles
 
             Mocker.GetMock<IUpgradeMediaFiles>()
                   .Verify(v => v.UpgradeBookFile(It.IsAny<BookFile>(), _approvedDecisions.First().Item, false), Times.Once());
+        }
+
+        [Test]
+        public void should_copy_when_can_move_files_but_copy_using_hardlinks_is_enabled()
+        {
+            Mocker.GetMock<IConfigService>()
+                  .Setup(s => s.CopyUsingHardlinks)
+                  .Returns(true);
+
+            Subject.Import(
+                new List<ImportDecision<LocalBook>> { _approvedDecisions.First() },
+                true,
+                new DownloadClientItem { Title = "Alien.Ant.Farm-Truant", CanMoveFiles = true, DownloadClientInfo = _clientInfo });
+
+            Mocker.GetMock<IUpgradeMediaFiles>()
+                  .Verify(v => v.UpgradeBookFile(It.IsAny<BookFile>(), _approvedDecisions.First().Item, true), Times.Once());
         }
 
         [Test]

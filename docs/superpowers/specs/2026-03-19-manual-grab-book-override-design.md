@@ -163,18 +163,18 @@ if (idOverrides?.Book != null && config.BypassMatchingSpecs)
 `GetLocalBookReleases()` (track grouping + augmentation) still runs — only the candidate generation and distance scoring are skipped.
 
 ### 7. `ImportDecisionMaker.cs` — filter both spec pipelines
-```csharp
-// Book-level specs (LocalEdition)
-var bookSpecsToRun = config.BypassMatchingSpecs
-    ? Enumerable.Empty<IImportDecisionEngineSpecification<LocalEdition>>()
-    : _bookSpecifications;
+A new marker interface `IAlwaysRunSpec` (no members) is introduced. `FreeSpaceSpecification` implements it. The filtering uses this interface:
 
-// Track-level specs (LocalBook)
-var trackSpecsToRun = config.BypassMatchingSpecs
-    ? _trackSpecifications.Where(s => s is FreeSpaceSpecification)
+```csharp
+// Book-level specs (LocalEdition): skip all when bypassing
+// → handled by the GetDecision(LocalEdition) override returning an approved decision directly
+
+// Track-level specs (LocalBook): run only IAlwaysRunSpec specs when bypassing
+var specs = config.BypassMatchingSpecs
+    ? _trackSpecifications.Where(s => s is IAlwaysRunSpec)
     : _trackSpecifications;
 ```
-This skips `CloseBookMatchSpecification` and `AlreadyImportedSpecification` (both `LocalEdition` level) while still enforcing free space.
+This skips `CloseBookMatchSpecification` and `AlreadyImportedSpecification` (both `LocalEdition` level) while still enforcing free space via `IAlwaysRunSpec`.
 
 ---
 

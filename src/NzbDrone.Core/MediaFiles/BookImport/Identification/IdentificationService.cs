@@ -127,21 +127,23 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Identification
         {
             if (idOverrides?.Book != null && config.BypassMatchingSpecs)
             {
-                var edition = idOverrides.Book.Editions.Value
-                                  .FirstOrDefault(e => e.Monitored)
-                              ?? idOverrides.Book.Editions.Value.First();
-
-                localBookRelease.Edition = edition;
-                localBookRelease.Distance = new Distance();
-
-                foreach (var localTrack in localBookRelease.LocalBooks)
+                var editions = idOverrides.Book.Editions?.Value;
+                if (editions != null && editions.Count > 0)
                 {
-                    localTrack.Edition = edition;
-                    localTrack.Book = idOverrides.Book;
-                    localTrack.Author = idOverrides.Author;
-                }
+                    var edition = editions.FirstOrDefault(e => e.Monitored) ?? editions.First();
 
-                return;
+                    localBookRelease.Edition = edition;
+                    localBookRelease.Distance = new Distance();
+
+                    foreach (var localTrack in localBookRelease.LocalBooks)
+                    {
+                        localTrack.Edition = edition;
+                        localTrack.Book = idOverrides.Book;
+                        localTrack.Author = idOverrides.Author;
+                    }
+
+                    return;
+                }
             }
 
             var watch = System.Diagnostics.Stopwatch.StartNew();

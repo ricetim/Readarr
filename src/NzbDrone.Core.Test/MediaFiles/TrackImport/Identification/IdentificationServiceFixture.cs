@@ -186,6 +186,40 @@ namespace NzbDrone.Core.Test.MediaFiles.BookImport.Identification
     public class IdentificationServiceBypassFixture : CoreTest<IdentificationService>
     {
         [Test]
+        public void bypass_falls_through_to_normal_pipeline_when_editions_not_populated()
+        {
+            var author = Builder<Author>.CreateNew().Build();
+            var book = Builder<Book>.CreateNew().Build();
+
+            // Do NOT set book.Editions — it stays null (simulating an unhydrated book)
+            var localBook = Builder<LocalBook>.CreateNew().Build();
+            var localEdition = new LocalEdition(new List<LocalBook> { localBook });
+
+            var idOverrides = new IdentificationOverrides { Author = author, Book = book };
+            var config = new ImportDecisionMakerConfig { BypassMatchingSpecs = true, SingleRelease = true };
+
+            Mocker.GetMock<ICandidateService>()
+                .Setup(c => c.GetDbCandidatesFromTags(It.IsAny<LocalEdition>(),
+                                                       It.IsAny<IdentificationOverrides>(),
+                                                       It.IsAny<bool>()))
+                .Returns(new List<CandidateEdition>());
+
+            Mocker.GetMock<ICandidateService>()
+                .Setup(c => c.GetRemoteCandidates(It.IsAny<LocalEdition>(),
+                                                   It.IsAny<IdentificationOverrides>()))
+                .Returns(new List<CandidateEdition>());
+
+            Subject.Identify(new List<LocalBook> { localBook }, idOverrides, config);
+
+            // Candidate service SHOULD be called because bypass fell through
+            Mocker.GetMock<ICandidateService>()
+                .Verify(c => c.GetDbCandidatesFromTags(It.IsAny<LocalEdition>(),
+                                                        It.IsAny<IdentificationOverrides>(),
+                                                        It.IsAny<bool>()),
+                        Times.Once());
+        }
+
+        [Test]
         public void bypass_matching_specs_skips_identification_pipeline()
         {
             // Arrange

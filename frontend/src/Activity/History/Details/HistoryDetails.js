@@ -65,7 +65,6 @@ function HistoryDetails(props) {
   if (eventType === 'grabbed') {
     const {
       indexer,
-      releaseGroup,
       customFormatScore,
       nzbInfoUrl,
       downloadClient,
@@ -92,15 +91,6 @@ function HistoryDetails(props) {
             <DescriptionListItem
               title={translate('Indexer')}
               data={indexer}
-            />
-        }
-
-        {
-          !!releaseGroup &&
-            <DescriptionListItem
-              descriptionClassName={styles.description}
-              title={translate('ReleaseGroup')}
-              data={releaseGroup}
             />
         }
 
@@ -368,7 +358,6 @@ function HistoryDetails(props) {
   if (eventType === 'downloadImported') {
     const {
       indexer,
-      releaseGroup,
       nzbInfoUrl,
       downloadClient,
       downloadId,
@@ -390,14 +379,6 @@ function HistoryDetails(props) {
             <DescriptionListItem
               title={translate('Indexer')}
               data={indexer}
-            />
-        }
-
-        {
-          !!releaseGroup &&
-            <DescriptionListItem
-              title={translate('ReleaseGroup')}
-              data={releaseGroup}
             />
         }
 

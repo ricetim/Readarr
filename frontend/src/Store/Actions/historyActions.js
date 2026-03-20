@@ -75,11 +75,6 @@ export const defaultState = {
       isVisible: false
     },
     {
-      name: 'releaseGroup',
-      label: 'Release Group',
-      isVisible: false
-    },
-    {
       name: 'sourceTitle',
       label: 'Source Title',
       isVisible: false

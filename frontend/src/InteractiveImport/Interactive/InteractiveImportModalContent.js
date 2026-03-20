@@ -22,7 +22,6 @@ import ConfirmImportModal from 'InteractiveImport/Confirmation/ConfirmImportModa
 import SelectEditionModal from 'InteractiveImport/Edition/SelectEditionModal';
 import SelectIndexerFlagsModal from 'InteractiveImport/IndexerFlags/SelectIndexerFlagsModal';
 import SelectQualityModal from 'InteractiveImport/Quality/SelectQualityModal';
-import SelectReleaseGroupModal from 'InteractiveImport/ReleaseGroup/SelectReleaseGroupModal';
 import getErrorMessage from 'Utilities/Object/getErrorMessage';
 import translate from 'Utilities/String/translate';
 import getSelectedIds from 'Utilities/Table/getSelectedIds';
@@ -47,11 +46,6 @@ const COLUMNS = [
   {
     name: 'book',
     label: 'Book',
-    isVisible: true
-  },
-  {
-    name: 'releaseGroup',
-    label: 'Release Group',
     isVisible: true
   },
   {
@@ -111,7 +105,6 @@ const SELECT = 'select';
 const AUTHOR = 'author';
 const BOOK = 'book';
 const EDITION = 'edition';
-const RELEASE_GROUP = 'releaseGroup';
 const QUALITY = 'quality';
 const INDEXER_FLAGS = 'indexerFlags';
 
@@ -326,7 +319,6 @@ class InteractiveImportModalContent extends Component {
       { key: BOOK, value: translate('SelectBook') },
       { key: EDITION, value: translate('SelectEdition') },
       { key: QUALITY, value: translate('SelectQuality') },
-      { key: RELEASE_GROUP, value: translate('SelectReleaseGroup') },
       { key: INDEXER_FLAGS, value: translate('SelectIndexerFlags') }
     ];
 
@@ -528,13 +520,6 @@ class InteractiveImportModalContent extends Component {
           isOpen={selectModalOpen === EDITION}
           importIdsByBook={importIdsByBook}
           books={editions}
-          onModalClose={this.onSelectModalClose}
-        />
-
-        <SelectReleaseGroupModal
-          isOpen={selectModalOpen === RELEASE_GROUP}
-          ids={selectedIds}
-          releaseGroup=""
           onModalClose={this.onSelectModalClose}
         />
 

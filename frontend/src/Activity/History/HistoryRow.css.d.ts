@@ -5,7 +5,6 @@ interface CssExports {
   'details': string;
   'downloadClient': string;
   'indexer': string;
-  'releaseGroup': string;
 }
 export const cssExports: CssExports;
 export default cssExports;

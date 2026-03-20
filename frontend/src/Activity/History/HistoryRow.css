@@ -16,12 +16,6 @@
   width: 55px;
 }
 
-.releaseGroup {
-  composes: cell from '~Components/Table/Cells/TableRowCell.css';
-
-  width: 110px;
-}
-
 .details {
   composes: cell from '~Components/Table/Cells/TableRowCell.css';
 

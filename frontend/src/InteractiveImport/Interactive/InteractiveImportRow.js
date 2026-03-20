@@ -17,7 +17,6 @@ import SelectAuthorModal from 'InteractiveImport/Author/SelectAuthorModal';
 import SelectBookModal from 'InteractiveImport/Book/SelectBookModal';
 import SelectIndexerFlagsModal from 'InteractiveImport/IndexerFlags/SelectIndexerFlagsModal';
 import SelectQualityModal from 'InteractiveImport/Quality/SelectQualityModal';
-import SelectReleaseGroupModal from 'InteractiveImport/ReleaseGroup/SelectReleaseGroupModal';
 import formatBytes from 'Utilities/Number/formatBytes';
 import translate from 'Utilities/String/translate';
 import InteractiveImportRowCellPlaceholder from './InteractiveImportRowCellPlaceholder';
@@ -35,7 +34,6 @@ class InteractiveImportRow extends Component {
       isDetailsModalOpen: false,
       isSelectAuthorModalOpen: false,
       isSelectBookModalOpen: false,
-      isSelectReleaseGroupModalOpen: false,
       isSelectQualityModalOpen: false,
       isSelectIndexerFlagsModalOpen: false
     };
@@ -130,10 +128,6 @@ class InteractiveImportRow extends Component {
     this.setState({ isSelectBookModalOpen: true });
   };
 
-  onSelectReleaseGroupPress = () => {
-    this.setState({ isSelectReleaseGroupModalOpen: true });
-  };
-
   onSelectQualityPress = () => {
     this.setState({ isSelectQualityModalOpen: true });
   };
@@ -149,11 +143,6 @@ class InteractiveImportRow extends Component {
 
   onSelectBookModalClose = (changed) => {
     this.setState({ isSelectBookModalOpen: false });
-    this.selectRowAfterChange(changed);
-  };
-
-  onSelectReleaseGroupModalClose = (changed) => {
-    this.setState({ isSelectReleaseGroupModalOpen: false });
     this.selectRowAfterChange(changed);
   };
 
@@ -178,7 +167,6 @@ class InteractiveImportRow extends Component {
       author,
       book,
       quality,
-      releaseGroup,
       size,
       customFormats,
       indexerFlags,
@@ -195,7 +183,6 @@ class InteractiveImportRow extends Component {
       isDetailsModalOpen,
       isSelectAuthorModalOpen,
       isSelectBookModalOpen,
-      isSelectReleaseGroupModalOpen,
       isSelectQualityModalOpen,
       isSelectIndexerFlagsModalOpen
     } = this.state;
@@ -208,7 +195,6 @@ class InteractiveImportRow extends Component {
 
     const showAuthorPlaceholder = isSelected && !author;
     const showBookNumberPlaceholder = !isReprocessing && isSelected && !!author && !book;
-    const showReleaseGroupPlaceholder = isSelected && !releaseGroup;
     const showQualityPlaceholder = isSelected && !quality;
     const showIndexerFlagsPlaceholder = isSelected && !indexerFlags;
 
@@ -269,19 +255,6 @@ class InteractiveImportRow extends Component {
         >
           {
             showBookNumberPlaceholder ? <InteractiveImportRowCellPlaceholder /> : bookTitle
-          }
-        </TableRowCellButton>
-
-        <TableRowCellButton
-          title={translate('ClickToChangeReleaseGroup')}
-          onPress={this.onSelectReleaseGroupPress}
-        >
-          {
-            showReleaseGroupPlaceholder ?
-              <InteractiveImportRowCellPlaceholder
-                isOptional={true}
-              /> :
-              releaseGroup
           }
         </TableRowCellButton>
 
@@ -405,13 +378,6 @@ class InteractiveImportRow extends Component {
           onModalClose={this.onSelectBookModalClose}
         />
 
-        <SelectReleaseGroupModal
-          isOpen={isSelectReleaseGroupModalOpen}
-          ids={[id]}
-          releaseGroup={releaseGroup ?? ''}
-          onModalClose={this.onSelectReleaseGroupModalClose}
-        />
-
         <SelectQualityModal
           isOpen={isSelectQualityModalOpen}
           ids={[id]}
@@ -440,7 +406,6 @@ InteractiveImportRow.propTypes = {
   author: PropTypes.object,
   book: PropTypes.object,
   foreignEditionId: PropTypes.string,
-  releaseGroup: PropTypes.string,
   quality: PropTypes.object,
   size: PropTypes.number.isRequired,
   customFormats: PropTypes.arrayOf(PropTypes.object),

@@ -191,17 +191,6 @@ class HistoryRow extends Component {
               );
             }
 
-            if (name === 'releaseGroup') {
-              return (
-                <TableRowCell
-                  key={name}
-                  className={styles.releaseGroup}
-                >
-                  {data.releaseGroup}
-                </TableRowCell>
-              );
-            }
-
             if (name === 'sourceTitle') {
               return (
                 <TableRowCell

@@ -206,7 +206,6 @@ export const actionHandlers = handleThunks({
         bookId: item.book ? item.book.id : undefined,
         foreignEditionId: item.foreignEditionId ? item.ForeignEditionId : undefined,
         quality: item.quality,
-        releaseGroup: item.releaseGroup,
         indexerFlags: item.indexerFlags,
         downloadId: item.downloadId,
         additionalFile: item.additionalFile,

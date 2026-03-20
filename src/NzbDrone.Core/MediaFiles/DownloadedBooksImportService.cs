@@ -20,7 +20,7 @@ namespace NzbDrone.Core.MediaFiles
     public interface IDownloadedBooksImportService
     {
         List<ImportResult> ProcessRootFolder(IDirectoryInfo directoryInfo);
-        List<ImportResult> ProcessPath(string path, ImportMode importMode = ImportMode.Auto, Author author = null, DownloadClientItem downloadClientItem = null);
+        List<ImportResult> ProcessPath(string path, ImportMode importMode, Author author, DownloadClientItem downloadClientItem, Book bookOverride);
         bool ShouldDeleteFolder(IDirectoryInfo directoryInfo);
     }
 
@@ -76,7 +76,7 @@ namespace NzbDrone.Core.MediaFiles
             return results;
         }
 
-        public List<ImportResult> ProcessPath(string path, ImportMode importMode = ImportMode.Auto, Author author = null, DownloadClientItem downloadClientItem = null)
+        public List<ImportResult> ProcessPath(string path, ImportMode importMode, Author author, DownloadClientItem downloadClientItem, Book bookOverride)
         {
             _logger.Debug("Processing path: {0}", path);
 
@@ -89,7 +89,7 @@ namespace NzbDrone.Core.MediaFiles
                     return ProcessFolder(directoryInfo, importMode, downloadClientItem);
                 }
 
-                return ProcessFolder(directoryInfo, importMode, author, downloadClientItem);
+                return ProcessFolder(directoryInfo, importMode, author, downloadClientItem, bookOverride);
             }
 
             if (_diskProvider.FileExists(path))
@@ -101,7 +101,7 @@ namespace NzbDrone.Core.MediaFiles
                     return ProcessFile(fileInfo, importMode, downloadClientItem);
                 }
 
-                return ProcessFile(fileInfo, importMode, author, downloadClientItem);
+                return ProcessFile(fileInfo, importMode, author, downloadClientItem, bookOverride);
             }
 
             LogInaccessiblePathError(path);
@@ -161,7 +161,7 @@ namespace NzbDrone.Core.MediaFiles
             return ProcessFolder(directoryInfo, importMode, author, downloadClientItem);
         }
 
-        private List<ImportResult> ProcessFolder(IDirectoryInfo directoryInfo, ImportMode importMode, Author author, DownloadClientItem downloadClientItem)
+        private List<ImportResult> ProcessFolder(IDirectoryInfo directoryInfo, ImportMode importMode, Author author, DownloadClientItem downloadClientItem, Book bookOverride = null)
         {
             if (_authorService.AuthorPathExists(directoryInfo.FullName))
             {
@@ -209,7 +209,8 @@ namespace NzbDrone.Core.MediaFiles
 
             var idOverrides = new IdentificationOverrides
             {
-                Author = author
+                Author = author,
+                Book = bookOverride
             };
             var idInfo = new ImportDecisionMakerInfo
             {
@@ -222,7 +223,8 @@ namespace NzbDrone.Core.MediaFiles
                 NewDownload = true,
                 SingleRelease = false,
                 IncludeExisting = false,
-                AddNewAuthors = false
+                AddNewAuthors = false,
+                BypassMatchingSpecs = bookOverride != null
             };
 
             var decisions = _importDecisionMaker.GetImportDecisions(audioFiles, idOverrides, idInfo, idConfig);
@@ -269,7 +271,7 @@ namespace NzbDrone.Core.MediaFiles
             return ProcessFile(fileInfo, importMode, author, downloadClientItem);
         }
 
-        private List<ImportResult> ProcessFile(IFileInfo fileInfo, ImportMode importMode, Author author, DownloadClientItem downloadClientItem)
+        private List<ImportResult> ProcessFile(IFileInfo fileInfo, ImportMode importMode, Author author, DownloadClientItem downloadClientItem, Book bookOverride = null)
         {
             if (Path.GetFileNameWithoutExtension(fileInfo.Name).StartsWith("._"))
             {
@@ -294,7 +296,8 @@ namespace NzbDrone.Core.MediaFiles
 
             var idOverrides = new IdentificationOverrides
             {
-                Author = author
+                Author = author,
+                Book = bookOverride
             };
             var idInfo = new ImportDecisionMakerInfo
             {
@@ -306,7 +309,8 @@ namespace NzbDrone.Core.MediaFiles
                 NewDownload = true,
                 SingleRelease = false,
                 IncludeExisting = false,
-                AddNewAuthors = false
+                AddNewAuthors = false,
+                BypassMatchingSpecs = bookOverride != null
             };
 
             var decisions = _importDecisionMaker.GetImportDecisions(new List<IFileInfo>() { fileInfo }, idOverrides, idInfo, idConfig);

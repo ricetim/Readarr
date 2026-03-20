@@ -218,7 +218,7 @@ namespace NzbDrone.Core.Test.MediaFiles
             var fileName = @"C:\folder\file.mkv".AsOsAgnostic();
             FileSystem.AddFile(fileName, new MockFileData(string.Empty));
 
-            var result = Subject.ProcessPath(fileName);
+            var result = Subject.ProcessPath(fileName, ImportMode.Auto, null, null, null);
 
             result.Should().HaveCount(1);
             result.First().ImportDecision.Should().NotBeNull();
@@ -259,7 +259,7 @@ namespace NzbDrone.Core.Test.MediaFiles
         {
             var folderName = @"C:\media\ba09030e-1234-1234-1234-123456789abc\[HorribleSubs] Maria the Virgin Witch - 09 [720p]".AsOsAgnostic();
 
-            Subject.ProcessPath(folderName).Should().BeEmpty();
+            Subject.ProcessPath(folderName, ImportMode.Auto, null, null, null).Should().BeEmpty();
 
             Mocker.GetMock<IParsingService>()
                 .Verify(v => v.GetAuthor(It.IsAny<string>()), Times.Never());
@@ -302,7 +302,7 @@ namespace NzbDrone.Core.Test.MediaFiles
 
             _trackedDownload.DownloadItem.CanMoveFiles = false;
 
-            Subject.ProcessPath(_droneFactory, ImportMode.Auto, _trackedDownload.RemoteBook.Author, _trackedDownload.DownloadItem);
+            Subject.ProcessPath(_droneFactory, ImportMode.Auto, _trackedDownload.RemoteBook.Author, _trackedDownload.DownloadItem, null);
 
             DiskProvider.FolderExists(_subFolders[0]).Should().BeTrue();
         }
@@ -316,7 +316,7 @@ namespace NzbDrone.Core.Test.MediaFiles
 
             _trackedDownload.DownloadItem.CanMoveFiles = false;
 
-            Subject.ProcessPath(_droneFactory, ImportMode.Move, _trackedDownload.RemoteBook.Author, _trackedDownload.DownloadItem);
+            Subject.ProcessPath(_droneFactory, ImportMode.Move, _trackedDownload.RemoteBook.Author, _trackedDownload.DownloadItem, null);
 
             DiskProvider.FolderExists(_subFolders[0]).Should().BeFalse();
         }
@@ -330,7 +330,7 @@ namespace NzbDrone.Core.Test.MediaFiles
 
             _trackedDownload.DownloadItem.CanMoveFiles = true;
 
-            Subject.ProcessPath(_droneFactory, ImportMode.Copy, _trackedDownload.RemoteBook.Author, _trackedDownload.DownloadItem);
+            Subject.ProcessPath(_droneFactory, ImportMode.Copy, _trackedDownload.RemoteBook.Author, _trackedDownload.DownloadItem, null);
 
             DiskProvider.FolderExists(_subFolders[0]).Should().BeTrue();
         }

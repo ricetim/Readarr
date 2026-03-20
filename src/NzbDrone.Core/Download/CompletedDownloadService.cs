@@ -6,6 +6,7 @@ using NLog;
 using NzbDrone.Common.EnvironmentInfo;
 using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Instrumentation.Extensions;
+using NzbDrone.Core.Books;
 using NzbDrone.Core.Download.TrackedDownloads;
 using NzbDrone.Core.History;
 using NzbDrone.Core.MediaFiles;
@@ -26,6 +27,7 @@ namespace NzbDrone.Core.Download
     {
         private readonly IEventAggregator _eventAggregator;
         private readonly IHistoryService _historyService;
+        private readonly IBookService _bookService;
         private readonly IProvideImportItemService _provideImportItemService;
         private readonly IDownloadedBooksImportService _downloadedTracksImportService;
         private readonly ITrackedDownloadAlreadyImported _trackedDownloadAlreadyImported;
@@ -33,6 +35,7 @@ namespace NzbDrone.Core.Download
 
         public CompletedDownloadService(IEventAggregator eventAggregator,
                                         IHistoryService historyService,
+                                        IBookService bookService,
                                         IProvideImportItemService provideImportItemService,
                                         IDownloadedBooksImportService downloadedTracksImportService,
                                         ITrackedDownloadAlreadyImported trackedDownloadAlreadyImported,
@@ -40,6 +43,7 @@ namespace NzbDrone.Core.Download
         {
             _eventAggregator = eventAggregator;
             _historyService = historyService;
+            _bookService = bookService;
             _provideImportItemService = provideImportItemService;
             _downloadedTracksImportService = downloadedTracksImportService;
             _trackedDownloadAlreadyImported = trackedDownloadAlreadyImported;
@@ -89,7 +93,19 @@ namespace NzbDrone.Core.Download
             trackedDownload.State = TrackedDownloadState.Importing;
 
             var outputPath = trackedDownload.ImportItem.OutputPath.FullPath;
-            var importResults = _downloadedTracksImportService.ProcessPath(outputPath, ImportMode.Auto, trackedDownload.RemoteBook?.Author, trackedDownload.DownloadItem);
+
+            Book bookOverride = null;
+            if (trackedDownload.IsManualGrab)
+            {
+                var historyItems = _historyService.FindByDownloadId(trackedDownload.DownloadItem.DownloadId);
+                var bookId = historyItems
+                    .Where(h => h.EventType == EntityHistoryEventType.Grabbed)
+                    .Select(h => h.BookId)
+                    .FirstOrDefault();
+                bookOverride = bookId > 0 ? _bookService.GetBook(bookId) : null;
+            }
+
+            var importResults = _downloadedTracksImportService.ProcessPath(outputPath, ImportMode.Auto, trackedDownload.RemoteBook?.Author, trackedDownload.DownloadItem, bookOverride);
 
             if (importResults.Empty())
             {

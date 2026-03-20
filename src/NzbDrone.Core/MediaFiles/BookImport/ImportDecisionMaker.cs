@@ -10,6 +10,7 @@ using NzbDrone.Core.DecisionEngine;
 using NzbDrone.Core.Download;
 using NzbDrone.Core.MediaFiles.BookImport.Aggregation;
 using NzbDrone.Core.MediaFiles.BookImport.Identification;
+using NzbDrone.Core.MediaFiles.BookImport.Specifications;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.RootFolders;
@@ -42,6 +43,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
         public bool IncludeExisting { get; set; }
         public bool AddNewAuthors { get; set; }
         public bool KeepAllEditions { get; set; }
+        public bool BypassMatchingSpecs { get; set; }
     }
 
     public class ImportDecisionMaker : IMakeImportDecision
@@ -163,13 +165,13 @@ namespace NzbDrone.Core.MediaFiles.BookImport
                 EnsureData(release);
                 release.NewDownload = config.NewDownload;
 
-                var releaseDecision = GetDecision(release, itemInfo.DownloadClientItem);
+                var releaseDecision = GetDecision(release, itemInfo.DownloadClientItem, config);
 
                 foreach (var localTrack in release.LocalBooks)
                 {
                     if (releaseDecision.Approved)
                     {
-                        decisions.AddIfNotNull(GetDecision(localTrack, itemInfo.DownloadClientItem));
+                        decisions.AddIfNotNull(GetDecision(localTrack, itemInfo.DownloadClientItem, config));
                     }
                     else
                     {
@@ -194,13 +196,17 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             }
         }
 
-        private ImportDecision<LocalEdition> GetDecision(LocalEdition localEdition, DownloadClientItem downloadClientItem)
+        private ImportDecision<LocalEdition> GetDecision(LocalEdition localEdition, DownloadClientItem downloadClientItem, ImportDecisionMakerConfig config)
         {
             ImportDecision<LocalEdition> decision = null;
 
             if (localEdition.Edition == null)
             {
                 decision = new ImportDecision<LocalEdition>(localEdition, new Rejection($"Couldn't find similar book for {localEdition}"));
+            }
+            else if (config.BypassMatchingSpecs)
+            {
+                decision = new ImportDecision<LocalEdition>(localEdition);
             }
             else
             {
@@ -226,7 +232,7 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             return decision;
         }
 
-        private ImportDecision<LocalBook> GetDecision(LocalBook localBook, DownloadClientItem downloadClientItem)
+        private ImportDecision<LocalBook> GetDecision(LocalBook localBook, DownloadClientItem downloadClientItem, ImportDecisionMakerConfig config)
         {
             ImportDecision<LocalBook> decision = null;
 
@@ -236,7 +242,11 @@ namespace NzbDrone.Core.MediaFiles.BookImport
             }
             else
             {
-                var reasons = _trackSpecifications.Select(c => EvaluateSpec(c, localBook, downloadClientItem))
+                var specs = config.BypassMatchingSpecs
+                    ? _trackSpecifications.Where(s => s is IAlwaysRunSpec)
+                    : _trackSpecifications;
+
+                var reasons = specs.Select(c => EvaluateSpec(c, localBook, downloadClientItem))
                     .Where(c => c != null);
 
                 decision = new ImportDecision<LocalBook>(localBook, reasons.ToArray());

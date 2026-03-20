@@ -9,7 +9,7 @@ using NzbDrone.Core.Parser.Model;
 
 namespace NzbDrone.Core.MediaFiles.BookImport.Specifications
 {
-    public class FreeSpaceSpecification : IImportDecisionEngineSpecification<LocalBook>
+    public class FreeSpaceSpecification : IImportDecisionEngineSpecification<LocalBook>, IAlwaysRunSpec
     {
         private readonly IDiskProvider _diskProvider;
         private readonly IConfigService _configService;

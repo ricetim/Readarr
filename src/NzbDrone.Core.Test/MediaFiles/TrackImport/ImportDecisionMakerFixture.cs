@@ -14,6 +14,7 @@ using NzbDrone.Core.MediaFiles;
 using NzbDrone.Core.MediaFiles.BookImport;
 using NzbDrone.Core.MediaFiles.BookImport.Aggregation;
 using NzbDrone.Core.MediaFiles.BookImport.Identification;
+using NzbDrone.Core.MediaFiles.BookImport.Specifications;
 using NzbDrone.Core.Parser.Model;
 using NzbDrone.Core.Profiles.Qualities;
 using NzbDrone.Core.Qualities;
@@ -362,6 +363,47 @@ namespace NzbDrone.Core.Test.MediaFiles.BookImport
 
             decisions.Should().HaveCount(3);
             decisions.First().Rejections.Should().NotBeEmpty();
+        }
+
+        [Test]
+        public void bypass_matching_specs_skips_book_specifications()
+        {
+            GivenSpecifications(_bookfail1);
+
+            var config = new ImportDecisionMakerConfig { BypassMatchingSpecs = true };
+            var result = Subject.GetImportDecisions(_fileInfos, null, null, config);
+
+            result.Should().HaveCount(1);
+            result.First().Approved.Should().BeTrue();
+        }
+
+        [Test]
+        public void bypass_matching_specs_skips_non_always_run_track_specifications()
+        {
+            GivenAugmentationSuccess();
+            GivenSpecifications(_bookpass1);
+            GivenSpecifications(_fail1);
+
+            var config = new ImportDecisionMakerConfig { BypassMatchingSpecs = true };
+            var result = Subject.GetImportDecisions(_fileInfos, null, null, config);
+
+            result.Should().HaveCount(1);
+            result.First().Approved.Should().BeTrue();
+        }
+
+        [Test]
+        public void bypass_matching_specs_still_runs_always_run_track_specifications()
+        {
+            GivenAugmentationSuccess();
+            GivenSpecifications(_bookpass1);
+            _fail1.As<IAlwaysRunSpec>();
+            GivenSpecifications(_fail1);
+
+            var config = new ImportDecisionMakerConfig { BypassMatchingSpecs = true };
+            var result = Subject.GetImportDecisions(_fileInfos, null, null, config);
+
+            result.Should().HaveCount(1);
+            result.First().Approved.Should().BeFalse();
         }
 
         [Test]

@@ -15,11 +15,13 @@ namespace NzbDrone.Core.IndexerSearch
 {
     internal class BookSearchService : IExecute<BookSearchCommand>,
                                IExecute<MissingBookSearchCommand>,
-                               IExecute<CutoffUnmetBookSearchCommand>
+                               IExecute<CutoffUnmetBookSearchCommand>,
+                               IExecute<SeriesSearchCommand>
     {
         private readonly ISearchForReleases _releaseSearchService;
         private readonly IBookService _bookService;
         private readonly IBookCutoffService _bookCutoffService;
+        private readonly ISeriesBookLinkService _seriesBookLinkService;
         private readonly IQueueService _queueService;
         private readonly IProcessDownloadDecisions _processDownloadDecisions;
         private readonly Logger _logger;
@@ -27,6 +29,7 @@ namespace NzbDrone.Core.IndexerSearch
         public BookSearchService(ISearchForReleases releaseSearchService,
             IBookService bookService,
             IBookCutoffService bookCutoffService,
+            ISeriesBookLinkService seriesBookLinkService,
             IQueueService queueService,
             IProcessDownloadDecisions processDownloadDecisions,
             Logger logger)
@@ -34,6 +37,7 @@ namespace NzbDrone.Core.IndexerSearch
             _releaseSearchService = releaseSearchService;
             _bookService = bookService;
             _bookCutoffService = bookCutoffService;
+            _seriesBookLinkService = seriesBookLinkService;
             _queueService = queueService;
             _processDownloadDecisions = processDownloadDecisions;
             _logger = logger;
@@ -136,6 +140,26 @@ namespace NzbDrone.Core.IndexerSearch
             var cutoffUnmet = books.Where(e => !queue.Contains(e.Id)).ToList();
 
             SearchForBulkBooks(cutoffUnmet, message.Trigger == CommandTrigger.Manual).GetAwaiter().GetResult();
+        }
+
+        public void Execute(SeriesSearchCommand message)
+        {
+            var bookIds = _seriesBookLinkService.GetLinksBySeries(message.SeriesId)
+                .Select(l => l.BookId)
+                .Distinct()
+                .ToList();
+
+            _logger.ProgressInfo("Searching for all {0} books in series", bookIds.Count);
+            var downloadedCount = 0;
+
+            foreach (var bookId in bookIds)
+            {
+                var decisions = _releaseSearchService.BookSearch(bookId, false, message.Trigger == CommandTrigger.Manual, false).GetAwaiter().GetResult();
+                var processed = _processDownloadDecisions.ProcessDecisions(decisions).GetAwaiter().GetResult();
+                downloadedCount += processed.Grabbed.Count;
+            }
+
+            _logger.ProgressInfo("Series search completed. {0} reports downloaded.", downloadedCount);
         }
     }
 }

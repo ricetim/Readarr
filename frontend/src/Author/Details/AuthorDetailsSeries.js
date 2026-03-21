@@ -130,6 +130,13 @@ class AuthorDetailsSeries extends Component {
             onPress={this.onMonitorSeriesPress}
           />
 
+          <IconButton
+            name={icons.SEARCH}
+            size={24}
+            title={translate('SearchSeries')}
+            onPress={() => this.props.onSearchSeriesPress(this.props.id)}
+          />
+
           <Link
             className={styles.expandButton}
             onPress={this.onExpandPress}
@@ -226,6 +233,7 @@ AuthorDetailsSeries.propTypes = {
   onExpandPress: PropTypes.func.isRequired,
   onSortPress: PropTypes.func.isRequired,
   onMonitorBookPress: PropTypes.func.isRequired,
+  onSearchSeriesPress: PropTypes.func.isRequired,
   uiSettings: PropTypes.object.isRequired,
   authorMonitored: PropTypes.bool.isRequired
 };

@@ -19,11 +19,7 @@ namespace NzbDrone.Core.Test.IndexerTests.BibliotikTests
             Subject.Definition = new IndexerDefinition
             {
                 Name = "Bibliotik",
-                Settings = new BibliotikSettings
-                {
-                    Username = "testuser",
-                    Password = "testpass"
-                }
+                Settings = new BibliotikSettings { Cookie = "test_session_cookie" }
             };
         }
 

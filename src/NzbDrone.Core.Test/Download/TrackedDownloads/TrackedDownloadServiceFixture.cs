@@ -209,7 +209,7 @@ namespace NzbDrone.Core.Test.Download.TrackedDownloads
                         EventType = EntityHistoryEventType.Grabbed,
                         Data = new Dictionary<string, string>
                         {
-                            { "ReleaseSource", "InteractiveSearch" }
+                            { "releaseSource", "InteractiveSearch" }
                         }
                     }
                 });
@@ -254,7 +254,7 @@ namespace NzbDrone.Core.Test.Download.TrackedDownloads
                         EventType = EntityHistoryEventType.Grabbed,
                         Data = new Dictionary<string, string>
                         {
-                            { "ReleaseSource", "Search" }
+                            { "releaseSource", "Search" }
                         }
                     }
                 });

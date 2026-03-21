@@ -55,6 +55,20 @@ namespace NzbDrone.Core.MediaFiles.BookImport.Identification
                 titleOptions.Add(maintitle);
             }
 
+            // SplitBookTitle only handles ':' and '(' subtitles. Many book titles use ' - ' as a
+            // subtitle separator (e.g. "Religion of the Apostles - Orthodox Christianity in the
+            // First Century"). Add the part before the first ' - ' as an additional option so a
+            // torrent named after only the main title still matches.
+            var dashIdx = edition.Title.IndexOf(" - ", System.StringComparison.Ordinal);
+            if (dashIdx > 0)
+            {
+                var dashTitle = edition.Title.Substring(0, dashIdx).Trim();
+                if (!titleOptions.Contains(dashTitle))
+                {
+                    titleOptions.Add(dashTitle);
+                }
+            }
+
             if (edition.Book.Value.SeriesLinks?.Value?.Any() ?? false)
             {
                 foreach (var l in edition.Book.Value.SeriesLinks.Value)

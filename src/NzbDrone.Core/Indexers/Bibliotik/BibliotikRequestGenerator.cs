@@ -72,7 +72,11 @@ namespace NzbDrone.Core.Indexers.Bibliotik
             }
 
             var request = requestBuilder.Build();
-            request.Cookies["session"] = Settings.Cookie;
+
+            // URL-decode the cookie value in case the user copied it from the browser's Network tab
+            // (which shows percent-encoded values like %2B for + and %3D for =) rather than the
+            // Application tab (which shows the raw decoded value).
+            request.Cookies["session"] = System.Net.WebUtility.UrlDecode(Settings.Cookie);
 
             yield return new IndexerRequest(request);
         }

@@ -130,6 +130,13 @@ namespace NzbDrone.Core.Configuration
             set { SetValue("DownloadPropersAndRepacks", value); }
         }
 
+        public bool PreferLargerFiles
+        {
+            get { return GetValueBoolean("PreferLargerFiles", false); }
+
+            set { SetValue("PreferLargerFiles", value); }
+        }
+
         public bool EnableCompletedDownloadHandling
         {
             get { return GetValueBoolean("EnableCompletedDownloadHandling", true); }

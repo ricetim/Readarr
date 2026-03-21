@@ -278,6 +278,20 @@ class MediaManagement extends Component {
                     />
                   </FormGroup>
 
+                  <FormGroup size={sizes.MEDIUM}>
+                    <FormLabel>
+                      {translate('PreferLargerFiles')}
+                    </FormLabel>
+
+                    <FormInputGroup
+                      type={inputTypes.CHECK}
+                      name="preferLargerFiles"
+                      helpText={translate('PreferLargerFilesHelpText')}
+                      onChange={onInputChange}
+                      {...settings.preferLargerFiles}
+                    />
+                  </FormGroup>
+
                   <FormGroup
                     advancedSettings={advancedSettings}
                     isAdvanced={true}

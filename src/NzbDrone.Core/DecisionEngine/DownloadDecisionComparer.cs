@@ -29,13 +29,22 @@ namespace NzbDrone.Core.DecisionEngine
             {
                 CompareQuality,
                 CompareCustomFormatScore,
+            };
+
+            if (_configService.PreferLargerFiles)
+            {
+                comparers.Add(CompareSize);
+            }
+
+            comparers.AddRange(new List<CompareDelegate>
+            {
                 CompareProtocol,
                 CompareIndexerPriority,
                 ComparePeersIfTorrent,
                 CompareBookCount,
                 CompareAgeIfUsenet,
                 CompareSize
-            };
+            });
 
             return comparers.Select(comparer => comparer(x, y)).FirstOrDefault(result => result != 0);
         }

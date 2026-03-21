@@ -11,6 +11,7 @@ namespace Readarr.Api.V1.Config
         public string RecycleBin { get; set; }
         public int RecycleBinCleanupDays { get; set; }
         public ProperDownloadTypes DownloadPropersAndRepacks { get; set; }
+        public bool PreferLargerFiles { get; set; }
         public bool CreateEmptyAuthorFolders { get; set; }
         public bool DeleteEmptyFolders { get; set; }
         public FileDateType FileDate { get; set; }
@@ -39,6 +40,7 @@ namespace Readarr.Api.V1.Config
                 RecycleBin = model.RecycleBin,
                 RecycleBinCleanupDays = model.RecycleBinCleanupDays,
                 DownloadPropersAndRepacks = model.DownloadPropersAndRepacks,
+                PreferLargerFiles = model.PreferLargerFiles,
                 CreateEmptyAuthorFolders = model.CreateEmptyAuthorFolders,
                 DeleteEmptyFolders = model.DeleteEmptyFolders,
                 FileDate = model.FileDate,

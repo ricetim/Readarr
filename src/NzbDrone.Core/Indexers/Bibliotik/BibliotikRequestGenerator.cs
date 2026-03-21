@@ -73,11 +73,10 @@ namespace NzbDrone.Core.Indexers.Bibliotik
 
             var request = requestBuilder.Build();
 
-            // Send the cookie value exactly as copied from the browser — do NOT UrlDecode it.
-            // .NET's Cookie class wraps values containing literal '=' in double-quotes, which
-            // Bibliotik does not accept. The raw cookie value uses %3D instead of '=', avoiding
-            // the quoting behaviour.
-            request.Cookies["id"] = Settings.Cookie;
+            // Set the Cookie header directly rather than via request.Cookies / CookieContainer.
+            // CookieContainer may interpret or re-encode the value; setting the raw header
+            // matches exactly what `curl -H "Cookie: id=<value>"` does.
+            request.Headers.Set("Cookie", $"id={Settings.Cookie}");
 
             yield return new IndexerRequest(request);
         }

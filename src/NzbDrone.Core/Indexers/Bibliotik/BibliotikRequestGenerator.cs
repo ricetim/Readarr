@@ -73,10 +73,11 @@ namespace NzbDrone.Core.Indexers.Bibliotik
 
             var request = requestBuilder.Build();
 
-            // URL-decode the cookie value in case the user copied it from the browser's Network tab
-            // (which shows percent-encoded values like %2B for + and %3D for =) rather than the
-            // Application tab (which shows the raw decoded value).
-            request.Cookies["id"] = System.Net.WebUtility.UrlDecode(Settings.Cookie);
+            // Send the cookie value exactly as copied from the browser — do NOT UrlDecode it.
+            // .NET's Cookie class wraps values containing literal '=' in double-quotes, which
+            // Bibliotik does not accept. The raw cookie value uses %3D instead of '=', avoiding
+            // the quoting behaviour.
+            request.Cookies["id"] = Settings.Cookie;
 
             yield return new IndexerRequest(request);
         }

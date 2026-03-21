@@ -25,7 +25,7 @@ namespace NzbDrone.Core.Indexers.Bibliotik
 
         public string BaseUrl { get; set; }
 
-        [FieldDefinition(0, Label = "Session Cookie", Privacy = PrivacyLevel.ApiKey, HelpText = "Your Bibliotik session cookie. In Chrome/Edge: DevTools (F12) → Application → Cookies → https://bibliotik.me → copy the Value of the 'id' cookie. In Firefox: DevTools → Storage → Cookies → https://bibliotik.me → copy the Value of the 'id' cookie.")]
+        [FieldDefinition(0, Label = "Session Cookie", Privacy = PrivacyLevel.ApiKey, HelpText = "Your Bibliotik session cookie. In Chrome/Edge: DevTools (F12) → Application → Cookies → https://bibliotik.me → copy the Value of the 'id' cookie. Paste the value exactly as shown — do not decode it.")]
         public string Cookie { get; set; }
 
         [FieldDefinition(1, Type = FieldType.Number, Label = "Early Download Limit", Unit = "days", HelpText = "Time before release date Readarr will download from this indexer, empty is no limit", Advanced = true)]

@@ -48,6 +48,8 @@ MAM uses numeric string IDs. The parser holds a static dictionary mapping them t
 
 Any unrecognised ID maps to `Language.Unknown`.
 
+**Important:** MAM's numeric IDs are entirely separate from Readarr's `Language.Id` values — they do not share a numbering scheme. The implementation builds a `static readonly Dictionary<string, Language>` keyed on MAM's string IDs, mapping to Readarr's named static constants (`Language.English`, `Language.Dutch`, etc.) — never via `Language.FindById(mamId)`.
+
 **Model change:** `MyAnonamouseTorrent` gains a `Language` string property (JSON key `"language"`).
 
 **Parser change:** `MyAnonamouseParser` maps the ID via the dictionary and sets `Languages` on the `MyAnonamouseInfo` object. If the result is `Unknown` or the field is absent, `Languages` stays empty (no regression for unknown languages).
@@ -62,7 +64,14 @@ Any unrecognised ID maps to `Language.Unknown`.
 public List<LanguageResource> Languages { get; set; }
 ```
 
-`ReleaseResourceMapper.ToResource()` maps it from `releaseInfo.Languages` using the existing `ToResource()` extension. Empty list serialises as `[]` — no behaviour change for indexers that don't set languages.
+`LanguageResource` already exists in `Readarr.Api.V1/Languages/LanguageResource.cs` (it's what the `/api/v1/language` endpoint returns), so we reuse it rather than inventing a new shape.
+
+Both directions of `ReleaseResourceMapper` must be updated:
+
+- `ToResource()`: `Languages = releaseInfo.Languages.ToResource()` — surfaces language for the manual grab UI.
+- `ToModel()`: `Languages = resource.Languages.ToModel()` — round-trips language back when the user manually grabs a displayed release, so the language filter spec can evaluate it correctly.
+
+If `Languages` is empty, the field serialises as `[]` — no behaviour change for indexers that don't set languages.
 
 ---
 
@@ -74,6 +83,8 @@ public List<LanguageResource> Languages { get; set; }
 public List<Language> AllowedLanguages { get; set; }
 ```
 
+The constructor must initialise it: `AllowedLanguages = new List<Language>();`
+
 Default: empty list = **any language allowed** (backwards-compatible).
 
 **Decision rule** (three-way unknown handling):
@@ -82,9 +93,11 @@ Default: empty list = **any language allowed** (backwards-compatible).
 - Release `Languages` is empty → accept (indexer doesn't provide language data)
 - Both non-empty → accept only if at least one release language is in the allowed list; otherwise reject
 
-**Migration 043** adds an `AllowedLanguages` column to `QualityProfiles` as a JSON array, defaulting to `'[]'`. Same pattern as other embedded list columns in that table.
+**Migration 043** adds an `AllowedLanguages` column to `QualityProfiles` as a JSON array, defaulting to `'[]'`. Same pattern as other embedded list columns in that table. `List<Language>` is auto-registered by `TableMapping.cs` via `RegisterEmbeddedConverter()` — no explicit type handler needed.
 
-`QualityProfileResource` exposes `AllowedLanguages` as `List<LanguageResource>`, mapped in both directions. `QualityProfileSchemaController` returns an empty list as the schema default.
+**Note:** Verify migration 043 is not claimed by any other in-flight work (see `docs/superpowers/plans/`) before numbering.
+
+`QualityProfileResource` exposes `AllowedLanguages` as `List<LanguageResource>`, mapped in both directions in `QualityProfileResource.cs`. The `QualityProfileSchemaController` needs no direct change — it calls `GetDefaultProfile().ToResource()`, which will return `[]` automatically once the constructor initialises the list.
 
 ---
 
@@ -107,12 +120,12 @@ New class `LanguageAllowedByProfileSpecification : IDecisionEngineSpecification`
 
 - New `Language` column in `InteractiveSearchRow.js`
 - Renders the first language name from `languages[]`, or a dash if empty
-- No new components
+- No new components needed
 
 ### Quality profile editor
 
-- New language multi-select field bound to `allowedLanguages`
-- Reuses existing `LanguageSelectInput` component (already used in metadata profile editor)
+- New language multi-select field bound to `allowedLanguages` in `EditQualityProfileModalContent.js`
+- A new `LanguageSelectInput.tsx` component must be created (no existing equivalent) — modelled after `IndexerFlagsSelectInput.tsx`, using `EnhancedSelectInput` and reading from `state.settings.languages.items` (already fetched via `FETCH_LANGUAGES` / `/api/v1/language`)
 - Empty selection displayed as placeholder "Any" — means no language filter
 - Sent as array of `{ id, name }` objects in PUT/POST body
 
@@ -124,22 +137,20 @@ New class `LanguageAllowedByProfileSpecification : IDecisionEngineSpecification`
 |------|---------|
 | `src/NzbDrone.Core/DecisionEngine/Specifications/LanguageAllowedByProfileSpecification.cs` | New decision spec |
 | `src/NzbDrone.Core/Datastore/Migration/043_quality_profile_allowed_languages.cs` | DB migration |
+| `frontend/src/Components/Form/LanguageSelectInput.tsx` | New multi-select component for languages |
 
 ## Files to Modify
 
 | File | Change |
 |------|--------|
 | `src/NzbDrone.Core/Indexers/MyAnonamouse/MyAnonamouseInfo.cs` | Add `Language` to `MyAnonamouseTorrent` |
-| `src/NzbDrone.Core/Indexers/MyAnonamouse/MyAnonamouseParser.cs` | Map language ID, populate `Languages` |
-| `src/NzbDrone.Core/Profiles/Qualities/QualityProfile.cs` | Add `AllowedLanguages` |
-| `src/NzbDrone.Core/Profiles/Qualities/QualityProfileService.cs` | Default empty list |
-| `src/Readarr.Api.V1/Indexers/ReleaseResource.cs` | Add `Languages` field + mapping |
-| `src/Readarr.Api.V1/Profiles/Quality/QualityProfileResource.cs` | Add `AllowedLanguages` |
-| `src/Readarr.Api.V1/Profiles/Quality/QualityProfileSchemaController.cs` | Schema default |
-| `frontend/src/InteractiveSearch/InteractiveSearchRow.js` | Language column |
-| `frontend/src/Settings/Profiles/Quality/QualityProfileItemEditor.js` (or equivalent) | Language multi-select |
-| `src/NzbDrone.Core.Test/IndexerTests/MyAnonamouseTests/MyAnonamouseFixture.cs` | Language parsing assertions |
-| `src/NzbDrone.Core.Test/Files/Indexers/MyAnonamouse/MyAnonamouse.json` | Language field already present |
+| `src/NzbDrone.Core/Indexers/MyAnonamouse/MyAnonamouseParser.cs` | Map language ID via static dict, populate `Languages` |
+| `src/NzbDrone.Core/Profiles/Qualities/QualityProfile.cs` | Add `AllowedLanguages`; init in constructor |
+| `src/Readarr.Api.V1/Indexers/ReleaseResource.cs` | Add `Languages` field; map in both `ToResource()` and `ToModel()` |
+| `src/Readarr.Api.V1/Profiles/Quality/QualityProfileResource.cs` | Add `AllowedLanguages`; map in both directions |
+| `frontend/src/InteractiveSearch/InteractiveSearchRow.js` | Add Language column |
+| `frontend/src/Settings/Profiles/Quality/EditQualityProfileModalContent.js` | Add language multi-select using `LanguageSelectInput` |
+| `src/NzbDrone.Core.Test/IndexerTests/MyAnonamouseTests/MyAnonamouseFixture.cs` | Add language parsing assertions |
 
 ---
 
@@ -148,3 +159,4 @@ New class `LanguageAllowedByProfileSpecification : IDecisionEngineSpecification`
 - Empty `AllowedLanguages` on a profile = allow all (safe default, no migration needed for data)
 - Empty `Languages` on a release = pass through (don't punish indexers that don't report language)
 - MAM `Unknown` language treated as "no language data" — left out of `Languages` list
+- MAM ID → `Language` mapping uses named static constants, never `Language.FindById(mamId)`

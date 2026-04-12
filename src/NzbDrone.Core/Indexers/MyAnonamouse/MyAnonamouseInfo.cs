@@ -6,6 +6,7 @@ namespace NzbDrone.Core.Indexers.MyAnonamouse
     public class MyAnonamouseTorrent
     {
         public string Id { get; set; }
+        public string Language { get; set; }
         public string Title { get; set; }
         public string Added { get; set; }
         public string Size { get; set; }

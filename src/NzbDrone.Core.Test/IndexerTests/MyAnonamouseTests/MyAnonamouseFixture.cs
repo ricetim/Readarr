@@ -97,5 +97,39 @@ namespace NzbDrone.Core.Test.IndexerTests.MyAnonamouseTests
             release.Guid.Should().Be("MAM-310000");
             release.IndexerFlags.HasFlag(IndexerFlags.Freeleech).Should().BeFalse();
         }
+
+        [Test]
+        public async Task should_parse_language_on_audiobook_release()
+        {
+            var recentFeed = ReadAllText(@"Files/Indexers/MyAnonamouse/MyAnonamouse.json");
+
+            Mocker.GetMock<IHttpClient>()
+                .Setup(o => o.ExecuteAsync(It.IsAny<HttpRequest>()))
+                .Returns<HttpRequest>(r => Task.FromResult(
+                    new HttpResponse(r, new HttpHeader { ContentType = "application/json" }, recentFeed)));
+
+            var releases = await Subject.FetchRecent();
+
+            var release = (MyAnonamouseInfo)releases[0];
+            release.Languages.Should().ContainSingle()
+                .Which.Should().Be(NzbDrone.Core.Languages.Language.English);
+        }
+
+        [Test]
+        public async Task should_parse_language_on_ebook_release()
+        {
+            var recentFeed = ReadAllText(@"Files/Indexers/MyAnonamouse/MyAnonamouse.json");
+
+            Mocker.GetMock<IHttpClient>()
+                .Setup(o => o.ExecuteAsync(It.IsAny<HttpRequest>()))
+                .Returns<HttpRequest>(r => Task.FromResult(
+                    new HttpResponse(r, new HttpHeader { ContentType = "application/json" }, recentFeed)));
+
+            var releases = await Subject.FetchRecent();
+
+            var release = (MyAnonamouseInfo)releases[1];
+            release.Languages.Should().ContainSingle()
+                .Which.Should().Be(NzbDrone.Core.Languages.Language.English);
+        }
     }
 }

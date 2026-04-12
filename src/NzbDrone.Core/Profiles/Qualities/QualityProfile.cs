@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using NzbDrone.Core.CustomFormats;
 using NzbDrone.Core.Datastore;
+using NzbDrone.Core.Languages;
 using NzbDrone.Core.Qualities;
 
 namespace NzbDrone.Core.Profiles.Qualities
@@ -11,6 +12,7 @@ namespace NzbDrone.Core.Profiles.Qualities
         public QualityProfile()
         {
             FormatItems = new List<ProfileFormatItem>();
+            AllowedLanguages = new List<Language>();
         }
 
         public string Name { get; set; }
@@ -20,6 +22,7 @@ namespace NzbDrone.Core.Profiles.Qualities
         public int CutoffFormatScore { get; set; }
         public List<ProfileFormatItem> FormatItems { get; set; }
         public List<QualityProfileQualityItem> Items { get; set; }
+        public List<Language> AllowedLanguages { get; set; }
 
         public Quality FirstAllowedQuality()
         {

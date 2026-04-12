@@ -1,8 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using NzbDrone.Core.CustomFormats;
+using NzbDrone.Core.Languages;
 using NzbDrone.Core.Profiles;
 using NzbDrone.Core.Profiles.Qualities;
+using Readarr.Api.V1.Languages;
 using Readarr.Http.REST;
 
 namespace Readarr.Api.V1.Profiles.Quality
@@ -16,6 +18,7 @@ namespace Readarr.Api.V1.Profiles.Quality
         public int MinFormatScore { get; set; }
         public int CutoffFormatScore { get; set; }
         public List<ProfileFormatItemResource> FormatItems { get; set; }
+        public List<LanguageResource> AllowedLanguages { get; set; }
     }
 
     public class QualityProfileQualityItemResource : RestResource
@@ -56,7 +59,10 @@ namespace Readarr.Api.V1.Profiles.Quality
                 Items = model.Items.ConvertAll(ToResource),
                 MinFormatScore = model.MinFormatScore,
                 CutoffFormatScore = model.CutoffFormatScore,
-                FormatItems = model.FormatItems.ConvertAll(ToResource)
+                FormatItems = model.FormatItems.ConvertAll(ToResource),
+                AllowedLanguages = model.AllowedLanguages
+                    .Select(l => new LanguageResource { Id = (int)l, Name = l.ToString() })
+                    .ToList()
             };
         }
 
@@ -103,7 +109,11 @@ namespace Readarr.Api.V1.Profiles.Quality
                 Items = resource.Items.ConvertAll(ToModel),
                 MinFormatScore = resource.MinFormatScore,
                 CutoffFormatScore = resource.CutoffFormatScore,
-                FormatItems = resource.FormatItems.ConvertAll(ToModel)
+                FormatItems = resource.FormatItems.ConvertAll(ToModel),
+                AllowedLanguages = resource.AllowedLanguages?
+                    .Where(r => Language.All.Any(l => l.Id == r.Id))
+                    .Select(r => (Language)r.Id)
+                    .ToList() ?? new List<Language>()
             };
         }
 

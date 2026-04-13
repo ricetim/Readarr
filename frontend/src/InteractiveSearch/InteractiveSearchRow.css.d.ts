@@ -7,6 +7,7 @@ interface CssExports {
   'download': string;
   'indexer': string;
   'indexerFlags': string;
+  'language': string;
   'peers': string;
   'protocol': string;
   'quality': string;

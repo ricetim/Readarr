@@ -72,6 +72,12 @@ const columns = [
     isVisible: true
   },
   {
+    name: 'language',
+    label: 'Language',
+    isSortable: false,
+    isVisible: true
+  },
+  {
     name: 'rejections',
     label: React.createElement(Icon, {
       name: icons.DANGER,

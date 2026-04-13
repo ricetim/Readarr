@@ -131,6 +131,7 @@ class InteractiveSearchRow extends Component {
       customFormatScore,
       customFormats,
       indexerFlags = 0,
+      languages = [],
       rejections,
       downloadAllowed,
       isGrabbing,
@@ -206,6 +207,10 @@ class InteractiveSearchRow extends Component {
           ) : null}
         </TableRowCell>
 
+        <TableRowCell className={styles.language}>
+          {languages.length > 0 ? languages[0].name : '-'}
+        </TableRowCell>
+
         <TableRowCell className={styles.rejected}>
           {
             !!rejections.length &&
@@ -279,6 +284,10 @@ InteractiveSearchRow.propTypes = {
   customFormats: PropTypes.arrayOf(PropTypes.object),
   customFormatScore: PropTypes.number.isRequired,
   indexerFlags: PropTypes.number.isRequired,
+  languages: PropTypes.arrayOf(PropTypes.shape({
+    id: PropTypes.number.isRequired,
+    name: PropTypes.string.isRequired
+  })),
   rejections: PropTypes.arrayOf(PropTypes.string).isRequired,
   downloadAllowed: PropTypes.bool.isRequired,
   isGrabbing: PropTypes.bool.isRequired,
@@ -292,6 +301,7 @@ InteractiveSearchRow.propTypes = {
 
 InteractiveSearchRow.defaultProps = {
   indexerFlags: 0,
+  languages: [],
   rejections: [],
   isGrabbing: false,
   isGrabbed: false

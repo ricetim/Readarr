@@ -39,6 +39,12 @@
   cursor: default;
 }
 
+.language {
+  composes: cell;
+
+  width: 70px;
+}
+
 .rejected,
 .indexerFlags,
 .download {

@@ -34,6 +34,11 @@ export interface NotificationAppState
 
 export type IndexerFlagSettingsAppState = AppSectionState<IndexerFlag>;
 export type UiSettingsAppState = AppSectionState<UiSettings>;
+export type LanguageSettingsAppState = AppSectionState<{
+  id: number;
+  name: string;
+  nameLower: string;
+}>;
 
 interface SettingsAppState {
   downloadClients: DownloadClientAppState;
@@ -41,6 +46,7 @@ interface SettingsAppState {
   importLists: ImportListAppState;
   indexerFlags: IndexerFlagSettingsAppState;
   indexers: IndexerAppState;
+  languages: LanguageSettingsAppState;
   notifications: NotificationAppState;
   ui: UiSettingsAppState;
 }

@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { createSelector } from 'reselect';
+import { fetchLanguages } from 'Store/Actions/Settings/languages';
 import { fetchQualityProfileSchema, saveQualityProfile, setQualityProfileValue } from 'Store/Actions/settingsActions';
 import createProfileInUseSelector from 'Store/Selectors/createProfileInUseSelector';
 import createProviderSettingsSelector from 'Store/Selectors/createProviderSettingsSelector';
@@ -111,7 +112,8 @@ function createMapStateToProps() {
 const mapDispatchToProps = {
   fetchQualityProfileSchema,
   setQualityProfileValue,
-  saveQualityProfile
+  saveQualityProfile,
+  onFetchLanguages: fetchLanguages
 };
 
 class EditQualityProfileModalContentConnector extends Component {
@@ -134,6 +136,7 @@ class EditQualityProfileModalContentConnector extends Component {
     if (!this.props.id && !this.props.isPopulated) {
       this.props.fetchQualityProfileSchema();
     }
+    this.props.onFetchLanguages();
   }
 
   componentDidUpdate(prevProps, prevState) {
@@ -482,6 +485,7 @@ EditQualityProfileModalContentConnector.propTypes = {
   setQualityProfileValue: PropTypes.func.isRequired,
   fetchQualityProfileSchema: PropTypes.func.isRequired,
   saveQualityProfile: PropTypes.func.isRequired,
+  onFetchLanguages: PropTypes.func.isRequired,
   onModalClose: PropTypes.func.isRequired
 };
 

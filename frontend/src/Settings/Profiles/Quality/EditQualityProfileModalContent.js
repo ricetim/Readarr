@@ -4,6 +4,7 @@ import Form from 'Components/Form/Form';
 import FormGroup from 'Components/Form/FormGroup';
 import FormInputGroup from 'Components/Form/FormInputGroup';
 import FormLabel from 'Components/Form/FormLabel';
+import LanguageSelectInput from 'Components/Form/LanguageSelectInput';
 import Button from 'Components/Link/Button';
 import SpinnerErrorButton from 'Components/Link/SpinnerErrorButton';
 import LoadingIndicator from 'Components/Loading/LoadingIndicator';
@@ -123,6 +124,7 @@ class EditQualityProfileModalContent extends Component {
       cutoff,
       minFormatScore,
       cutoffFormatScore,
+      allowedLanguages,
       items,
       formatItems
     } = item;
@@ -236,6 +238,18 @@ class EditQualityProfileModalContent extends Component {
                             />
                           </FormGroup>
                       }
+
+                      <FormGroup size={sizes.EXTRA_SMALL}>
+                        <FormLabel size={sizes.SMALL}>
+                          {translate('AllowedLanguages')}
+                        </FormLabel>
+
+                        <LanguageSelectInput
+                          name="allowedLanguages"
+                          value={allowedLanguages ? allowedLanguages.value : []}
+                          onChange={onInputChange}
+                        />
+                      </FormGroup>
 
                       <div className={styles.formatItemLarge}>
                         {getCustomFormatRender(formatItems, otherProps)}

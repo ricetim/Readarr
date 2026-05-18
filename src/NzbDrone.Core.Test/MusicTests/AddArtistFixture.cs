@@ -32,6 +32,10 @@ namespace NzbDrone.Core.Test.MusicTests
             Mocker.GetMock<IAuthorService>()
                 .Setup(s => s.AddAuthor(It.IsAny<Author>(), It.IsAny<bool>()))
                 .Returns<Author, bool>((author, _) => author);
+
+            Mocker.GetMock<IAuthorService>()
+                .Setup(s => s.AddAuthors(It.IsAny<List<Author>>(), It.IsAny<bool>()))
+                .Returns<List<Author>, bool>((authors, _) => authors);
         }
 
         private void GivenValidAuthor(string readarrId)
@@ -216,6 +220,30 @@ namespace NzbDrone.Core.Test.MusicTests
 
             var author = Subject.AddAuthor(newAuthor);
             author.Path.Should().Be(newAuthor.Path + " (3)");
+        }
+
+        [Test]
+        public void should_fill_minimum_metadata_for_partial_bulk_import_authors()
+        {
+            var newAuthor = new Author
+            {
+                Metadata = new AuthorMetadata
+                {
+                    ForeignAuthorId = "21483807",
+                    Name = "Carley Fortune"
+                },
+                RootFolderPath = @"C:\Test\Books"
+            };
+
+            GivenValidPath();
+
+            var authors = Subject.AddAuthors(new List<Author> { newAuthor }, false);
+
+            authors.Should().HaveCount(1);
+            authors[0].Metadata.Value.TitleSlug.Should().Be("21483807");
+            authors[0].Metadata.Value.SortName.Should().Be("carley fortune");
+            authors[0].Metadata.Value.NameLastFirst.Should().Be("Fortune, Carley");
+            authors[0].Metadata.Value.SortNameLastFirst.Should().Be("fortune, carley");
         }
     }
 }

@@ -86,9 +86,27 @@ namespace NzbDrone.Core.Books
         private Author AddSkyhookData(Author newAuthor)
         {
             // Skip the blocking bookinfo fetch at add time. The search result already
-            // provides sufficient metadata (name, foreign ID, image URL, KCA). Books,
-            // series, and full metadata are populated by RefreshAuthorCommand which is
-            // queued immediately after the author is saved to DB.
+            // provides sufficient metadata for manual adds, while import lists may only
+            // provide a foreign ID and author name. Normalize the minimum metadata set
+            // required by the DB and let RefreshAuthorCommand fill in the rest.
+            var metadata = newAuthor.Metadata.Value;
+
+            metadata.Name = metadata.Name.CleanSpaces();
+
+            if (metadata.TitleSlug.IsNullOrWhiteSpace())
+            {
+                metadata.TitleSlug = metadata.ForeignAuthorId;
+            }
+
+            if (metadata.Name.IsNotNullOrWhiteSpace())
+            {
+                metadata.SortName ??= metadata.Name.ToLower();
+                metadata.NameLastFirst ??= metadata.Name.ToLastFirst();
+                metadata.SortNameLastFirst ??= metadata.NameLastFirst.ToLower();
+            }
+
+            metadata.Kca ??= string.Empty;
+
             return newAuthor;
         }
 

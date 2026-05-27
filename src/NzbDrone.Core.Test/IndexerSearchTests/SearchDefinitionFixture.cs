@@ -16,6 +16,16 @@ namespace NzbDrone.Core.Test.IndexerSearchTests
             Subject.AuthorQuery.Should().Be(expected);
         }
 
+        [TestCase("C.J. Cherryh", "CJ+Cherryh")]
+        [TestCase("J.R.R. Tolkien", "JRR+Tolkien")]
+        [TestCase("H.P. Lovecraft", "HP+Lovecraft")]
+        [TestCase("C. S. Lewis", "C+S+Lewis")]
+        public void should_collapse_initials_in_author_name(string author, string expected)
+        {
+            Subject.Author = new Author { Name = author };
+            Subject.AuthorQuery.Should().Be(expected);
+        }
+
         [TestCase("…and Justice for All", "and+Justice+for+All")]
         [TestCase("American III: Solitary Man", "American+III")]
         [TestCase("Sad Clowns & Hillbillies", "Sad+Clowns+Hillbillies")]

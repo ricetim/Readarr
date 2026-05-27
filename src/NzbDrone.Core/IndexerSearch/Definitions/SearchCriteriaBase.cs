@@ -11,6 +11,9 @@ namespace NzbDrone.Core.IndexerSearch.Definitions
         private static readonly Regex NonWord = new Regex(@"[^\w`'’]", RegexOptions.IgnoreCase | RegexOptions.Compiled);
         private static readonly Regex BeginningThe = new Regex(@"^the\s", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
+        // Collapse runs of single-letter initials (e.g. "C.J.", "J.R.R.") before the period-to-space pass; otherwise indexers receive single-letter tokens.
+        private static readonly Regex Initials = new Regex(@"(?:\b[A-Za-z]\.){2,}", RegexOptions.Compiled);
+
         public virtual bool MonitoredBooksOnly { get; set; }
         public virtual bool UserInvokedSearch { get; set; }
         public virtual bool InteractiveSearch { get; set; }
@@ -34,6 +37,7 @@ namespace NzbDrone.Core.IndexerSearch.Definitions
             var cleanTitle = BeginningThe.Replace(title, string.Empty);
 
             cleanTitle = cleanTitle.Replace(" & ", " ");
+            cleanTitle = Initials.Replace(cleanTitle, m => m.Value.Replace(".", string.Empty));
             cleanTitle = cleanTitle.Replace(".", " ");
             cleanTitle = NonWord.Replace(cleanTitle, "+");
 

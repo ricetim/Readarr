@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using NzbDrone.Common.Http;
 using NzbDrone.Common.Serializer;
 using NzbDrone.Core.IndexerSearch.Definitions;
@@ -11,6 +12,9 @@ namespace NzbDrone.Core.Indexers.MyAnonamouse
     public class MyAnonamouseRequestGenerator : IIndexerRequestGenerator
     {
         private const string SearchUrl = "https://www.myanonamouse.net/tor/js/loadSearchJSONbasic.php";
+
+        // MAM stores initialed names with spaces ("C J Cherryh", not "C.J. Cherryh"), so periods in the search text never match.
+        private static readonly Regex MultiSpace = new Regex(@"\s+", RegexOptions.Compiled);
 
         public MyAnonamouseSettings Settings { get; set; }
         public DateTime? LastRssSyncDate { get; set; }
@@ -67,7 +71,7 @@ namespace NzbDrone.Core.Indexers.MyAnonamouse
             // Text search — include author name to narrow results (MAM titles are "Author - Title [FORMAT]")
             // Use raw title (not BookQuery, which URL-encodes spaces as '+')
             var bookTitle = searchCriteria.BookTitle.SplitBookTitle(searchCriteria.Author.Name).Item1;
-            var searchText = $"{searchCriteria.Author.Name} {bookTitle}";
+            var searchText = NormalizeSearchText($"{searchCriteria.Author.Name} {bookTitle}");
             var torBody = new Dictionary<string, object>
             {
                 { "main_cat", new[] { 13, 14 } },
@@ -118,7 +122,7 @@ namespace NzbDrone.Core.Indexers.MyAnonamouse
                 { "searchType", searchType },
                 { "sortType", "default" },
                 { "startNumber", 0 },
-                { "text", searchCriteria.Author.Name },
+                { "text", NormalizeSearchText(searchCriteria.Author.Name) },
                 { "srchIn", new[] { "author" } }
             };
 
@@ -143,6 +147,11 @@ namespace NzbDrone.Core.Indexers.MyAnonamouse
             httpRequest.Cookies["mam_id"] = Settings.Cookie;
 
             return new IndexerRequest(httpRequest);
+        }
+
+        private static string NormalizeSearchText(string text)
+        {
+            return MultiSpace.Replace(text.Replace('.', ' '), " ").Trim();
         }
 
         private static string MapSearchType(int searchType)

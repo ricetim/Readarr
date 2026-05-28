@@ -171,6 +171,38 @@ namespace NzbDrone.Core.Test.IndexerTests.MyAnonamouseTests
             srchIn.Should().BeEquivalentTo(new[] { "author" });
         }
 
+        // MAM stores initialed names with spaces ("C J Cherryh", not "C.J. Cherryh"). Periods in the
+        // outgoing search text never match, so book and author searches for these authors return zero
+        // — even though the books exist on the tracker. Normalize "." to " " in the author name.
+        [TestCase("C.J. Cherryh", "C J Cherryh")]
+        [TestCase("J.K. Rowling", "J K Rowling")]
+        [TestCase("J.R.R. Tolkien", "J R R Tolkien")]
+        [TestCase("H.P. Lovecraft", "H P Lovecraft")]
+        public void book_search_should_normalize_periods_in_author_name(string authorName, string expectedAuthorPart)
+        {
+            _bookSearchCriteria.Author = new Author { Name = authorName };
+            _bookSearchCriteria.BookTitle = "Downbelow Station";
+
+            var results = Subject.GetSearchRequests(_bookSearchCriteria);
+            var request = results.GetAllTiers().First().First().HttpRequest;
+            var text = GetRequestBody(request)["tor"]["text"].Value<string>();
+
+            text.Should().Be($"{expectedAuthorPart} Downbelow Station");
+        }
+
+        [TestCase("C.J. Cherryh", "C J Cherryh")]
+        [TestCase("J.K. Rowling", "J K Rowling")]
+        public void author_search_should_normalize_periods_in_author_name(string authorName, string expected)
+        {
+            _authorSearchCriteria.Author = new Author { Name = authorName };
+
+            var results = Subject.GetSearchRequests(_authorSearchCriteria);
+            var request = results.GetAllTiers().First().First().HttpRequest;
+            var text = GetRequestBody(request)["tor"]["text"].Value<string>();
+
+            text.Should().Be(expected);
+        }
+
         [Test]
         public void search_type_active_should_map_to_active()
         {

@@ -52,6 +52,7 @@ namespace Readarr.Api.V1.Indexers
         public DownloadProtocol Protocol { get; set; }
         public int IndexerFlags { get; set; }
         public List<LanguageResource> Languages { get; set; }
+        public ReleaseDetailsResource Details { get; set; }
 
         // Sent when queuing an unknown release
         [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)]
@@ -118,6 +119,15 @@ namespace Readarr.Api.V1.Indexers
                 Languages = releaseInfo.Languages
                     .Select(l => new LanguageResource { Id = (int)l, Name = l.ToString() })
                     .ToList(),
+                Details = releaseInfo.Details == null ? null : new ReleaseDetailsResource
+                {
+                    Narrators = releaseInfo.Details.Narrators,
+                    FileCount = releaseInfo.Details.FileCount,
+                    Description = releaseInfo.Details.Description,
+                    Series = releaseInfo.Details.Series,
+                    Tags = releaseInfo.Details.Tags,
+                    Category = releaseInfo.Details.Category
+                },
             };
         }
 

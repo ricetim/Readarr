@@ -111,7 +111,8 @@ namespace NzbDrone.Core.Indexers.MyAnonamouse
                     Peers = (seeders ?? 0) + (leechers ?? 0),
                     DownloadProtocol = DownloadProtocol.Torrent,
                     IndexerFlags = flags,
-                    Languages = languages
+                    Languages = languages,
+                    Details = BuildDetails(torrent)
                 });
             }
 
@@ -122,25 +123,93 @@ namespace NzbDrone.Core.Indexers.MyAnonamouse
 
         private static string ParseAuthorInfo(string authorInfo)
         {
-            if (string.IsNullOrWhiteSpace(authorInfo))
+            return ParseNamePairs(authorInfo).FirstOrDefault() ?? string.Empty;
+        }
+
+        // author_info and narrator_info share a shape: a JSON object encoded as a
+        // string inside a JSON field, mapping ids to names.
+        private static List<string> ParseNamePairs(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
             {
-                return string.Empty;
+                return new List<string>();
             }
 
             try
             {
-                var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(authorInfo);
+                var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
                 if (dict != null && dict.Count > 0)
                 {
-                    return dict.Values.First();
+                    return dict.Values.Where(v => v.IsNotNullOrWhiteSpace()).ToList();
                 }
             }
             catch
             {
-                // Return empty string on any parse failure
+                // Malformed data degrades to no names rather than failing the whole search
             }
 
-            return string.Empty;
+            return new List<string>();
+        }
+
+        // series_info differs from the name pairs: its values are lists of
+        // [name, placement], e.g. {"67": ["Love at Stake", "01-16"]}.
+        private static string ParseSeriesInfo(string json)
+        {
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return null;
+            }
+
+            try
+            {
+                var dict = JsonSerializer.Deserialize<Dictionary<string, List<string>>>(json);
+                var first = dict?.Values.FirstOrDefault();
+
+                if (first == null || first.Count == 0 || first[0].IsNullOrWhiteSpace())
+                {
+                    return null;
+                }
+
+                var placement = first.Count > 1 ? first[1] : null;
+
+                return placement.IsNotNullOrWhiteSpace() ? $"{first[0]} ({placement})" : first[0];
+            }
+            catch
+            {
+                // Series info is decorative; never fail a search over it
+            }
+
+            return null;
+        }
+
+        private static ReleaseDetails BuildDetails(MyAnonamouseTorrent torrent)
+        {
+            var narrators = ParseNamePairs(torrent.Narrator_Info);
+            var series = ParseSeriesInfo(torrent.Series_Info);
+            var description = BbCodeCleaner.Strip(torrent.Description);
+            var fileCount = TryParseInt(torrent.Numfiles);
+            var tags = torrent.Tags?.Trim();
+            var category = torrent.Catname?.Trim();
+
+            if (!narrators.Any() &&
+                !fileCount.HasValue &&
+                description.IsNullOrWhiteSpace() &&
+                series.IsNullOrWhiteSpace() &&
+                tags.IsNullOrWhiteSpace() &&
+                category.IsNullOrWhiteSpace())
+            {
+                return null;
+            }
+
+            return new ReleaseDetails
+            {
+                Narrators = narrators,
+                FileCount = fileCount,
+                Description = description,
+                Series = series,
+                Tags = tags.IsNullOrWhiteSpace() ? null : tags,
+                Category = category.IsNullOrWhiteSpace() ? null : category
+            };
         }
 
         private static int? TryParseInt(string value)

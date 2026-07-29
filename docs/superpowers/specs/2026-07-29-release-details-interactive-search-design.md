@@ -1,7 +1,7 @@
 # Release Details in Interactive Search — Design Spec
 
 **Date:** 2026-07-29
-**Status:** Approved
+**Status:** Implemented
 
 ## Overview
 

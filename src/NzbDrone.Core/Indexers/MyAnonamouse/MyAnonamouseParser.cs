@@ -186,7 +186,7 @@ namespace NzbDrone.Core.Indexers.MyAnonamouse
         {
             var narrators = ParseNamePairs(torrent.Narrator_Info);
             var series = ParseSeriesInfo(torrent.Series_Info);
-            var description = BbCodeCleaner.Strip(torrent.Description);
+            var description = ReleaseDescriptionCleaner.Strip(torrent.Description);
             var fileCount = TryParseInt(torrent.Numfiles);
             var tags = torrent.Tags?.Trim();
             var category = torrent.Catname?.Trim();

@@ -40,6 +40,12 @@ namespace NzbDrone.Core.Parser.Model
         [JsonIgnore]
         public IndexerFlags IndexerFlags { get; set; }
 
+        // Display-only; [JsonIgnore] keeps it out of the PendingReleases table,
+        // matching how IndexerFlags is handled. ReleaseResourceMapper maps it
+        // explicitly from the in-memory object during search.
+        [JsonIgnore]
+        public ReleaseDetails Details { get; set; }
+
         // Used to track pending releases that are being reprocessed
         [JsonIgnore]
         public PendingReleaseReason? PendingReleaseReason { get; set; }

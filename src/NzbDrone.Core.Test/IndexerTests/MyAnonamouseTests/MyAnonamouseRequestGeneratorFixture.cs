@@ -244,5 +244,35 @@ namespace NzbDrone.Core.Test.IndexerTests.MyAnonamouseTests
 
             body["tor"]["searchType"].Value<string>().Should().Be("all");
         }
+
+        // MAM only returns the description field when this flag is present on the request.
+        // It is request-level, not per-release: every result carries it, or none do.
+        [Test]
+        public void recent_request_should_request_description()
+        {
+            var results = Subject.GetRecentRequests();
+            var request = results.GetAllTiers().First().First().HttpRequest;
+
+            GetRequestBody(request)["description"].Should().NotBeNull();
+        }
+
+        [Test]
+        public void book_search_requests_should_all_request_description()
+        {
+            var results = Subject.GetSearchRequests(_bookSearchCriteria);
+            var requests = results.GetTier(0).SelectMany(r => r).ToList();
+
+            requests.Should().HaveCount(2);
+            requests.Should().OnlyContain(r => GetRequestBody(r.HttpRequest)["description"] != null);
+        }
+
+        [Test]
+        public void author_search_request_should_request_description()
+        {
+            var results = Subject.GetSearchRequests(_authorSearchCriteria);
+            var request = results.GetAllTiers().First().First().HttpRequest;
+
+            GetRequestBody(request)["description"].Should().NotBeNull();
+        }
     }
 }

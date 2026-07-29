@@ -137,6 +137,11 @@ namespace NzbDrone.Core.Indexers.MyAnonamouse
 
         private IndexerRequest BuildRequest(Dictionary<string, object> body)
         {
+            // MAM only returns descriptions when this flag is present on the request.
+            // It is request-level, not per-release: all results carry it, or none do.
+            // Set here rather than at each call site so no request can omit it.
+            body["description"] = string.Empty;
+
             var httpRequest = new HttpRequestBuilder(SearchUrl)
                 .Accept(HttpAccept.Json)
                 .Build();

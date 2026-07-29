@@ -1,0 +1,33 @@
+.details {
+  padding: 12px 20px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 90px 1fr;
+  gap: 4px 12px;
+}
+
+.label {
+  color: var(--dimColor);
+  font-weight: bold;
+}
+
+.description {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--borderColor);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.clamped {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+}
+
+.toggle {
+  margin-top: 4px;
+}

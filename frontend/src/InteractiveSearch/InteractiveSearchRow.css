@@ -2,6 +2,19 @@
   composes: cell from '~Components/Table/Cells/TableRowCell.css';
 }
 
+.expander {
+  composes: cell;
+
+  width: 30px;
+  cursor: pointer;
+}
+
+.detailsCell {
+  composes: cell;
+
+  padding: 0;
+}
+
 .protocol {
   composes: cell;
 

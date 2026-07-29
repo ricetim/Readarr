@@ -22,6 +22,9 @@
 }
 
 .clamped {
+  /* -webkit-box is required for line-clamp; there is no unprefixed equivalent
+     with the same behaviour across the browsers this app targets. */
+  /* stylelint-disable-next-line value-no-vendor-prefix */
   display: -webkit-box;
   overflow: hidden;
   -webkit-line-clamp: 4;

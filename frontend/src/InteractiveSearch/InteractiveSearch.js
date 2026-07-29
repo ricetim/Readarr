@@ -12,6 +12,12 @@ import styles from './InteractiveSearch.css';
 
 const columns = [
   {
+    name: 'expander',
+    label: '',
+    isSortable: false,
+    isVisible: true
+  },
+  {
     name: 'protocol',
     label: 'Source',
     isSortable: true,

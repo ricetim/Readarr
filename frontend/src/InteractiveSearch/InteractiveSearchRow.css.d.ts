@@ -4,7 +4,9 @@ interface CssExports {
   'age': string;
   'cell': string;
   'customFormatScore': string;
+  'detailsCell': string;
   'download': string;
+  'expander': string;
   'indexer': string;
   'indexerFlags': string;
   'language': string;

@@ -19,6 +19,7 @@ import formatBytes from 'Utilities/Number/formatBytes';
 import formatCustomFormatScore from 'Utilities/Number/formatCustomFormatScore';
 import translate from 'Utilities/String/translate';
 import Peers from './Peers';
+import ReleaseDetails from './ReleaseDetails';
 import styles from './InteractiveSearchRow.css';
 
 function getDownloadIcon(isGrabbing, isGrabbed, grabError) {
@@ -66,7 +67,8 @@ class InteractiveSearchRow extends Component {
     super(props, context);
 
     this.state = {
-      isConfirmGrabModalOpen: false
+      isConfirmGrabModalOpen: false,
+      isExpanded: false
     };
   }
 
@@ -111,6 +113,10 @@ class InteractiveSearchRow extends Component {
     this.setState({ isConfirmGrabModalOpen: false });
   };
 
+  onExpandPress = () => {
+    this.setState({ isExpanded: !this.state.isExpanded });
+  };
+
   //
   // Render
 
@@ -132,6 +138,7 @@ class InteractiveSearchRow extends Component {
       customFormats,
       indexerFlags = 0,
       languages = [],
+      details,
       rejections,
       downloadAllowed,
       isGrabbing,
@@ -141,127 +148,161 @@ class InteractiveSearchRow extends Component {
       grabError
     } = this.props;
 
+    const { isExpanded } = this.state;
+    const hasDetails = !!details;
+
     return (
-      <TableRow>
-        <TableRowCell className={styles.protocol}>
-          <ProtocolLabel
-            protocol={protocol}
-          />
-        </TableRowCell>
-
-        <TableRowCell
-          className={styles.age}
-          title={formatDateTime(publishDate, longDateFormat, timeFormat, { includeSeconds: true })}
-        >
-          {formatAge(age, ageHours, ageMinutes)}
-        </TableRowCell>
-
-        <TableRowCell>
-          <div className={styles.titleContent}>
-            <Link to={infoUrl}>
-              {title}
-            </Link>
-          </div>
-        </TableRowCell>
-
-        <TableRowCell className={styles.indexer}>
-          {indexer}
-        </TableRowCell>
-
-        <TableRowCell className={styles.size}>
-          {formatBytes(size)}
-        </TableRowCell>
-
-        <TableRowCell className={styles.peers}>
-          {
-            protocol === 'torrent' &&
-              <Peers
-                seeders={seeders}
-                leechers={leechers}
-              />
-          }
-        </TableRowCell>
-
-        <TableRowCell className={styles.quality}>
-          <BookQuality quality={quality} showRevision={true} />
-        </TableRowCell>
-
-        <TableRowCell className={styles.customFormatScore}>
-          <Tooltip
-            anchor={
-              formatCustomFormatScore(customFormatScore, customFormats.length)
+      <>
+        <TableRow>
+          <TableRowCell className={styles.expander}>
+            {
+              hasDetails ?
+                <Icon
+                  name={isExpanded ? icons.COLLAPSE : icons.EXPAND}
+                  title={isExpanded ? translate('ShowLess') : translate('ReleaseDetails')}
+                  onClick={this.onExpandPress}
+                /> :
+                null
             }
-            tooltip={<BookFormats formats={customFormats} />}
-            position={tooltipPositions.LEFT}
-          />
-        </TableRowCell>
+          </TableRowCell>
 
-        <TableRowCell className={styles.indexerFlags}>
-          {indexerFlags ? (
-            <Popover
-              anchor={<Icon name={icons.FLAG} kind={kinds.PRIMARY} />}
-              title={translate('IndexerFlags')}
-              body={<IndexerFlags indexerFlags={indexerFlags} />}
+          <TableRowCell className={styles.protocol}>
+            <ProtocolLabel
+              protocol={protocol}
+            />
+          </TableRowCell>
+
+          <TableRowCell
+            className={styles.age}
+            title={formatDateTime(publishDate, longDateFormat, timeFormat, { includeSeconds: true })}
+          >
+            {formatAge(age, ageHours, ageMinutes)}
+          </TableRowCell>
+
+          <TableRowCell>
+            <div className={styles.titleContent}>
+              <Link to={infoUrl}>
+                {title}
+              </Link>
+            </div>
+          </TableRowCell>
+
+          <TableRowCell className={styles.indexer}>
+            {indexer}
+          </TableRowCell>
+
+          <TableRowCell className={styles.size}>
+            {formatBytes(size)}
+          </TableRowCell>
+
+          <TableRowCell className={styles.peers}>
+            {
+              protocol === 'torrent' &&
+                <Peers
+                  seeders={seeders}
+                  leechers={leechers}
+                />
+            }
+          </TableRowCell>
+
+          <TableRowCell className={styles.quality}>
+            <BookQuality quality={quality} showRevision={true} />
+          </TableRowCell>
+
+          <TableRowCell className={styles.customFormatScore}>
+            <Tooltip
+              anchor={
+                formatCustomFormatScore(customFormatScore, customFormats.length)
+              }
+              tooltip={<BookFormats formats={customFormats} />}
               position={tooltipPositions.LEFT}
             />
-          ) : null}
-        </TableRowCell>
+          </TableRowCell>
 
-        <TableRowCell className={styles.language}>
-          {languages.length > 0 ? languages[0].name : '-'}
-        </TableRowCell>
-
-        <TableRowCell className={styles.rejected}>
-          {
-            !!rejections.length &&
+          <TableRowCell className={styles.indexerFlags}>
+            {indexerFlags ? (
               <Popover
-                anchor={
-                  <Icon
-                    name={icons.DANGER}
-                    kind={kinds.DANGER}
-                  />
-                }
-                title={translate('ReleaseRejected')}
-                body={
-                  <ul>
-                    {
-                      rejections.map((rejection, index) => {
-                        return (
-                          <li key={index}>
-                            {rejection}
-                          </li>
-                        );
-                      })
-                    }
-                  </ul>
-                }
+                anchor={<Icon name={icons.FLAG} kind={kinds.PRIMARY} />}
+                title={translate('IndexerFlags')}
+                body={<IndexerFlags indexerFlags={indexerFlags} />}
                 position={tooltipPositions.LEFT}
               />
-          }
-        </TableRowCell>
+            ) : null}
+          </TableRowCell>
 
-        <TableRowCell className={styles.download}>
-          {
-            <SpinnerIconButton
-              name={getDownloadIcon(isGrabbing, isGrabbed, grabError)}
-              kind={getDownloadKind(isGrabbed, grabError, downloadAllowed)}
-              title={getDownloadTooltip(isGrabbing, isGrabbed, grabError)}
-              isSpinning={isGrabbing}
-              onPress={downloadAllowed ? this.onGrabPress : this.onConfirmGrabPress}
-            />
-          }
-        </TableRowCell>
+          <TableRowCell className={styles.language}>
+            {languages.length > 0 ? languages[0].name : '-'}
+          </TableRowCell>
 
-        <ConfirmModal
-          isOpen={this.state.isConfirmGrabModalOpen}
-          kind={kinds.WARNING}
-          title={translate('GrabRelease')}
-          message={translate('GrabReleaseMessageText', [title])}
-          confirmLabel={translate('Grab')}
-          onConfirm={this.onGrabConfirm}
-          onCancel={this.onGrabCancel}
-        />
-      </TableRow>
+          <TableRowCell className={styles.rejected}>
+            {
+              !!rejections.length &&
+                <Popover
+                  anchor={
+                    <Icon
+                      name={icons.DANGER}
+                      kind={kinds.DANGER}
+                    />
+                  }
+                  title={translate('ReleaseRejected')}
+                  body={
+                    <ul>
+                      {
+                        rejections.map((rejection, index) => {
+                          return (
+                            <li key={index}>
+                              {rejection}
+                            </li>
+                          );
+                        })
+                      }
+                    </ul>
+                  }
+                  position={tooltipPositions.LEFT}
+                />
+            }
+          </TableRowCell>
+
+          <TableRowCell className={styles.download}>
+            {
+              <SpinnerIconButton
+                name={getDownloadIcon(isGrabbing, isGrabbed, grabError)}
+                kind={getDownloadKind(isGrabbed, grabError, downloadAllowed)}
+                title={getDownloadTooltip(isGrabbing, isGrabbed, grabError)}
+                isSpinning={isGrabbing}
+                onPress={downloadAllowed ? this.onGrabPress : this.onConfirmGrabPress}
+              />
+            }
+          </TableRowCell>
+
+          <ConfirmModal
+            isOpen={this.state.isConfirmGrabModalOpen}
+            kind={kinds.WARNING}
+            title={translate('GrabRelease')}
+            message={translate('GrabReleaseMessageText', [title])}
+            confirmLabel={translate('Grab')}
+            onConfirm={this.onGrabConfirm}
+            onCancel={this.onGrabCancel}
+          />
+        </TableRow>
+
+        {
+          hasDetails && isExpanded ?
+            <TableRow>
+              <TableRowCell className={styles.detailsCell} colSpan={13}>
+                <ReleaseDetails
+                  narrators={details.narrators}
+                  fileCount={details.fileCount}
+                  description={details.description}
+                  series={details.series}
+                  tags={details.tags}
+                  category={details.category}
+                />
+              </TableRowCell>
+            </TableRow> :
+            null
+        }
+      </>
     );
   }
 }
@@ -288,6 +329,14 @@ InteractiveSearchRow.propTypes = {
     id: PropTypes.number.isRequired,
     name: PropTypes.string.isRequired
   })),
+  details: PropTypes.shape({
+    narrators: PropTypes.arrayOf(PropTypes.string),
+    fileCount: PropTypes.number,
+    description: PropTypes.string,
+    series: PropTypes.string,
+    tags: PropTypes.string,
+    category: PropTypes.string
+  }),
   rejections: PropTypes.arrayOf(PropTypes.string).isRequired,
   downloadAllowed: PropTypes.bool.isRequired,
   isGrabbing: PropTypes.bool.isRequired,

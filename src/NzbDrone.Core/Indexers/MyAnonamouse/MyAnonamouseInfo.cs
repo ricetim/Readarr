@@ -22,6 +22,8 @@ namespace NzbDrone.Core.Indexers.MyAnonamouse
         public string Series_Info { get; set; }
         public string Tags { get; set; }
         public string Filetype { get; set; }
+        public string Numfiles { get; set; }
+        public string Description { get; set; }
         public string Dl { get; set; }
         public string Times_Completed { get; set; }
     }

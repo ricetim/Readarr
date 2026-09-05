@@ -571,6 +571,19 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
             book.AuthorMetadataId = author.AuthorMetadataId;
         }
 
+        // An upstream failure is otherwise invisible: without the status and body a revoked
+        // metadata API key is indistinguishable from any other error. Keep the excerpt short
+        // so a large error page cannot flood the log.
+        private static string Truncate(string content)
+        {
+            if (content.IsNullOrWhiteSpace())
+            {
+                return "<empty>";
+            }
+
+            return content.Length <= 512 ? content : content.Substring(0, 512) + "…";
+        }
+
         private Author PollAuthorUncached(string foreignAuthorId)
         {
             var kca = _authorMetadataService.FindById(foreignAuthorId)?.Kca ?? string.Empty;
@@ -609,7 +622,13 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                         throw new BadRequestException(foreignAuthorId);
                     }
 
-                    throw new BookInfoException("Unexpected error fetching author data from bookinfo");
+                    _logger.Warn("bookinfo returned {0} for author {1}. Body: {2}",
+                        (int)httpResponse.StatusCode,
+                        foreignAuthorId,
+                        Truncate(httpResponse.Content));
+
+                    throw new BookInfoException(
+                        $"Unexpected error fetching author data from bookinfo (HTTP {(int)httpResponse.StatusCode})");
                 }
 
                 var resource = JsonSerializer.Deserialize<AuthorResource>(httpResponse.Content, SerializerSettings);
@@ -687,7 +706,13 @@ namespace NzbDrone.Core.MetadataSource.BookInfo
                     }
                     else
                     {
-                        throw new BookInfoException("Unexpected response fetching book data");
+                        _logger.Warn("bookinfo returned {0} for book {1}. Body: {2}",
+                            (int)httpResponse.StatusCode,
+                            foreignBookId,
+                            Truncate(httpResponse.Content));
+
+                        throw new BookInfoException(
+                            $"Unexpected response fetching book data (HTTP {(int)httpResponse.StatusCode})");
                     }
                 }
 

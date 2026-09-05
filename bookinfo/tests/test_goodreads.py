@@ -578,3 +578,146 @@ class TestFetchAuthorFastPathKca:
         # Should keep the original, not overwrite with GraphQL result
         assert author["Kca"] == "kca://author/v1.EXISTING"
         await client.close()
+
+
+class TestApiKeySelfHealing:
+    """Goodreads rotated the AppSync key on 2026-08-29 and every instance broke for days.
+
+    The client now rediscovers the key from a public Goodreads page when a call is
+    rejected, so a rotation costs one retry rather than an outage.
+    """
+
+    NEW_KEY = "da2-aaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+    def _page(self, key: str) -> str:
+        return f'<html><body><script>window.cfg={{"apiKey":"{key}"}}</script></body></html>'
+
+    @respx.mock
+    async def test_refreshes_key_and_retries_on_401(self):
+        from goodreads import KEY_DISCOVERY_URLS
+
+        calls = []
+
+        def graphql_responder(request):
+            calls.append(request.headers["x-api-key"])
+            if request.headers["x-api-key"] == self.NEW_KEY:
+                return httpx.Response(200, json={"data": {"ok": True}})
+            return httpx.Response(401, json={"errors": [{"errorType": "UnauthorizedException"}]})
+
+        respx.post(GRAPHQL_URL).mock(side_effect=graphql_responder)
+        respx.get(KEY_DISCOVERY_URLS[0]).mock(
+            return_value=httpx.Response(200, text=self._page(self.NEW_KEY))
+        )
+
+        client = GoodreadsClient(rate=1000)
+        try:
+            result = await client._graphql_raw({"query": "query{__typename}"})
+        finally:
+            await client.close()
+
+        assert result == {"ok": True}  # _graphql_raw unwraps payload["data"]
+        assert calls == [GRAPHQL_KEY, self.NEW_KEY], "should retry once with the new key"
+        assert client._api_key == self.NEW_KEY
+
+    @respx.mock
+    async def test_does_not_retry_forever_when_page_key_is_also_rejected(self):
+        from goodreads import KEY_DISCOVERY_URLS
+
+        route = respx.post(GRAPHQL_URL).mock(return_value=httpx.Response(401))
+        # Page still publishes the same key that was just rejected.
+        respx.get(KEY_DISCOVERY_URLS[0]).mock(
+            return_value=httpx.Response(200, text=self._page(GRAPHQL_KEY))
+        )
+
+        client = GoodreadsClient(rate=1000)
+        try:
+            with pytest.raises(httpx.HTTPStatusError):
+                await client._graphql_raw({"query": "query{__typename}"})
+        finally:
+            await client.close()
+
+        assert route.call_count == 1, "must not retry when the discovered key is unchanged"
+
+    @respx.mock
+    async def test_surfaces_original_error_when_discovery_page_fails(self):
+        from goodreads import KEY_DISCOVERY_URLS
+
+        respx.post(GRAPHQL_URL).mock(return_value=httpx.Response(401))
+        respx.get(KEY_DISCOVERY_URLS[0]).mock(return_value=httpx.Response(503))
+
+        client = GoodreadsClient(rate=1000)
+        try:
+            with pytest.raises(httpx.HTTPStatusError) as exc:
+                await client._graphql_raw({"query": "query{__typename}"})
+        finally:
+            await client.close()
+
+        assert exc.value.response.status_code == 401
+
+    @respx.mock
+    async def test_non_auth_errors_do_not_trigger_a_key_refresh(self):
+        from goodreads import KEY_DISCOVERY_URLS
+
+        respx.post(GRAPHQL_URL).mock(return_value=httpx.Response(500))
+        discovery = respx.get(KEY_DISCOVERY_URLS[0]).mock(
+            return_value=httpx.Response(200, text=self._page(self.NEW_KEY))
+        )
+
+        client = GoodreadsClient(rate=1000)
+        try:
+            with pytest.raises(httpx.HTTPStatusError):
+                await client._graphql_raw({"query": "query{__typename}"})
+        finally:
+            await client.close()
+
+        assert not discovery.called, "a 500 is not an auth problem"
+
+    @respx.mock
+    async def test_falls_back_to_next_page_when_goodreads_throttles(self):
+        """Goodreads answers 202 with an empty body when mitigating bots."""
+        from goodreads import KEY_DISCOVERY_URLS
+
+        def graphql_responder(request):
+            if request.headers["x-api-key"] == self.NEW_KEY:
+                return httpx.Response(200, json={"data": {"ok": True}})
+            return httpx.Response(401)
+
+        respx.post(GRAPHQL_URL).mock(side_effect=graphql_responder)
+        respx.get(KEY_DISCOVERY_URLS[0]).mock(return_value=httpx.Response(202, text=""))
+        second = respx.get(KEY_DISCOVERY_URLS[1]).mock(
+            return_value=httpx.Response(200, text=self._page(self.NEW_KEY))
+        )
+
+        client = GoodreadsClient(rate=1000)
+        try:
+            result = await client._graphql_raw({"query": "query{__typename}"})
+        finally:
+            await client.close()
+
+        assert second.called, "should try the next candidate page"
+        assert result == {"ok": True}
+        assert client._api_key == self.NEW_KEY
+
+    @respx.mock
+    async def test_waf_403_does_not_trigger_a_key_refresh(self):
+        """403 is WAFForbiddenException (IP rate-limited), not a rotated key."""
+        from goodreads import KEY_DISCOVERY_URLS
+
+        respx.post(GRAPHQL_URL).mock(
+            return_value=httpx.Response(
+                403, json={"errors": [{"errorType": "WAFForbiddenException"}]}
+            )
+        )
+        discovery = respx.get(KEY_DISCOVERY_URLS[0]).mock(
+            return_value=httpx.Response(200, text=self._page(self.NEW_KEY))
+        )
+
+        client = GoodreadsClient(rate=1000)
+        try:
+            with pytest.raises(httpx.HTTPStatusError) as exc:
+                await client._graphql_raw({"query": "query{__typename}"})
+        finally:
+            await client.close()
+
+        assert exc.value.response.status_code == 403
+        assert not discovery.called, "a WAF block is not a key rotation"

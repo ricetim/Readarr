@@ -124,6 +124,41 @@ app = FastAPI(lifespan=lifespan)
 # Routes
 # ---------------------------------------------------------------------------
 
+def _upstream_error(exc: Exception, context: str) -> HTTPException:
+    """Translate an upstream Goodreads failure into a status Readarr can act on.
+
+    Previously these propagated as opaque 500s (and /search swallowed them entirely and
+    returned an empty list), so a revoked API key was indistinguishable from "no results".
+    """
+    if isinstance(exc, httpx.HTTPStatusError):
+        status = exc.response.status_code
+        if status == 401:
+            logger.error(
+                "Goodreads rejected our API key (HTTP 401) while %s. The key has most likely "
+                "been rotated - see rreading-glasses issue #586.",
+                context,
+            )
+            return HTTPException(
+                status_code=502,
+                detail="Upstream rejected our API key (HTTP 401); it may have been rotated",
+            )
+        if status == 403:
+            logger.error(
+                "Goodreads returned HTTP 403 (WAFForbiddenException) while %s. This is AWS "
+                "rate-limiting this IP, not a bad key; back off and retry later.",
+                context,
+            )
+            return HTTPException(
+                status_code=502,
+                detail="Upstream blocked this instance (HTTP 403); likely rate limited",
+            )
+        logger.error("Goodreads returned HTTP %d while %s", status, context)
+        return HTTPException(status_code=502, detail=f"Upstream returned HTTP {status}")
+
+    logger.exception("Unexpected upstream failure while %s", context)
+    return HTTPException(status_code=502, detail=f"{type(exc).__name__}: {exc}")
+
+
 @app.get("/author/changed")
 async def author_changed():
     """Tell Readarr no global author changes are available (use its own schedule)."""
@@ -144,12 +179,12 @@ async def get_author(author_id: int, background_tasks: BackgroundTasks, kca: str
     author_image_url = ""
     author_description = ""
 
-    if not kca:
-        kca, author_name, author_image_url, author_description = (
-            await goodreads_client.resolve_author_xml(author_id)
-        )
-
     try:
+        if not kca:
+            kca, author_name, author_image_url, author_description = (
+                await goodreads_client.resolve_author_xml(author_id)
+            )
+
         partial, first_page_next_token = await goodreads_client.fetch_author_fast_path(
             author_id=author_id,
             author_name=author_name,
@@ -159,6 +194,8 @@ async def get_author(author_id: int, background_tasks: BackgroundTasks, kca: str
         )
     except LookupError:
         raise HTTPException(status_code=404, detail=f"Author {author_id} not found in Goodreads")
+    except Exception as exc:
+        raise _upstream_error(exc, f"fetching author {author_id}") from exc
 
     # If name is still empty, extract it from contributor data in works GraphQL response.
     if not partial.get("Name"):
@@ -303,9 +340,8 @@ async def get_series(series_id: int):
 async def search(q: str):
     try:
         return await goodreads_client.search(q)
-    except Exception:
-        logger.warning("Search failed for %r", q)
-        return []
+    except Exception as exc:
+        raise _upstream_error(exc, f"searching for {q!r}") from exc
 
 
 @app.get("/recommended")

@@ -19,9 +19,29 @@ GRAPHQL_URL = binascii.unhexlify(
     "68747470733a2f2f6b7862776d716f76366a676733646161616d62373434796375342e61707073796e"
     "632d6170692e75732d656173742d312e616d617a6f6e6177732e636f6d2f6772617068716c"
 ).decode()
+# Rotated 2026-09-05: Goodreads revoked the previous key on 2026-08-29, which made every
+# GraphQL call return 401 and took out search and author refresh entirely.
+# See https://github.com/blampe/rreading-glasses/issues/586.
 GRAPHQL_KEY = binascii.unhexlify(
-    "6461322d787067736479646b627265676a68707236656a7a716468757779"
+    "6461322d643266797579627773626633706f797175766270326d62697775"
 ).decode()
+# Goodreads ships this same key in the HTML of its own public book pages, so when they
+# rotate it we can rediscover it rather than wait for a human to notice. Rotation on
+# 2026-08-29 broke every self-hosted instance for days; see rreading-glasses issue #586.
+# Several candidates: Goodreads intermittently answers 202 with an empty body as bot
+# mitigation, and any single book page could one day stop embedding the key.
+KEY_DISCOVERY_URLS = (
+    "https://www.goodreads.com/book/show/2767052-the-hunger-games",
+    "https://www.goodreads.com/book/show/3.Harry_Potter_and_the_Sorcerer_s_Stone",
+    "https://www.goodreads.com/book/show/5907.The_Hobbit",
+)
+KEY_PATTERN = re.compile(r"da2-[a-z0-9]{26}")
+KEY_REFRESH_MIN_INTERVAL = 300.0  # seconds; stops a burst of 401s causing a scrape storm
+DISCOVERY_UA = (
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/120.0.0.0 Safari/537.36"
+)
+
 XML_BASE = "https://www.goodreads.com"
 XML_KEY = binascii.unhexlify(
     "543772537858796441735a6730645533504a7a466877"
@@ -323,6 +343,10 @@ class GoodreadsClient:
         self._rate_limiter = RateLimiter(rate)
         self._batch_size = batch_size
         self._client = httpx.AsyncClient(timeout=30.0)
+        # Starts from the baked-in value and self-heals if Goodreads rotates it.
+        self._api_key = GRAPHQL_KEY
+        self._key_lock = asyncio.Lock()
+        self._key_refreshed_at = 0.0
 
     async def close(self) -> None:
         await self._client.aclose()
@@ -331,16 +355,88 @@ class GoodreadsClient:
     # Internal HTTP helpers
     # ------------------------------------------------------------------ #
 
-    async def _graphql_raw(self, body: dict) -> dict:
+    async def _refresh_api_key(self, rejected_key: str) -> bool:
+        """Rediscover the AppSync key from a public Goodreads page. True if it changed."""
+        async with self._key_lock:
+            if self._api_key != rejected_key:
+                # Another caller already replaced it while we waited on the lock.
+                return True
+
+            now = time.monotonic()
+            if now - self._key_refreshed_at < KEY_REFRESH_MIN_INTERVAL:
+                return False
+            self._key_refreshed_at = now
+
+            match = None
+            source = ""
+            for url in KEY_DISCOVERY_URLS:
+                try:
+                    response = await self._client.get(
+                        url, headers={"User-Agent": DISCOVERY_UA}, follow_redirects=True
+                    )
+                except Exception as exc:
+                    logger.warning("Key discovery request to %s failed: %s", url, exc)
+                    continue
+
+                if not response.text:
+                    # Goodreads answers 202 with an empty body when it is throttling us.
+                    logger.warning(
+                        "Key discovery page %s returned HTTP %d with an empty body "
+                        "(likely bot mitigation).",
+                        url,
+                        response.status_code,
+                    )
+                    continue
+
+                match = KEY_PATTERN.search(response.text)
+                if match:
+                    source = url
+                    break
+
+                logger.warning("No AppSync key present at %s.", url)
+
+            if not match:
+                logger.error(
+                    "Could not rediscover a Goodreads API key from any of %d candidate pages; "
+                    "will retry after %.0fs.",
+                    len(KEY_DISCOVERY_URLS),
+                    KEY_REFRESH_MIN_INTERVAL,
+                )
+                return False
+
+            if match.group(0) == rejected_key:
+                logger.error(
+                    "Goodreads rejected the API key but %s still publishes the same one; "
+                    "this may be a block or an auth change rather than a rotation.",
+                    source,
+                )
+                return False
+
+            logger.warning(
+                "Goodreads rejected the API key; adopted a newly discovered one from %s.",
+                source,
+            )
+            self._api_key = match.group(0)
+            return True
+
+    async def _graphql_raw(self, body: dict, allow_key_refresh: bool = True) -> dict:
         await self._rate_limiter.acquire()
+        used_key = self._api_key
         response = await self._client.post(
             GRAPHQL_URL,
             json=body,
             headers={
-                "x-api-key": GRAPHQL_KEY,
+                "x-api-key": used_key,
                 "content-type": "application/json",
             },
         )
+
+        # Only 401 (UnauthorizedException) means the key was rotated. A 403 is
+        # WAFForbiddenException - AWS rate-limiting this IP - which a new key won't fix.
+        if response.status_code == 401 and allow_key_refresh:
+            if await self._refresh_api_key(used_key):
+                return await self._graphql_raw(body, allow_key_refresh=False)
+
         response.raise_for_status()
         payload = response.json()
         if "errors" in payload:

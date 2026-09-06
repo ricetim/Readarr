@@ -23,12 +23,16 @@ All notable changes to the fork are recorded here.
 
 ### New
 
+### Fixed
+
+## [11.0.1] - 2026-09-06
+
+### New
+
 - **Basic authentication has been removed.** It sent your credentials on every request and had
   no way to log out; Forms authentication does the same job with a proper login page and a
   session. Anyone using Basic is switched to Forms automatically on first start, keeping the
   same username and password — no action needed.
-
-### Fixed
 
 ## [11.0.0] - 2026-09-06
 
@@ -110,6 +114,7 @@ self-hosted metadata service bundled into the same container.
 - `CreateEmptyAuthorFolders` is respected.
 - PDF tag reading no longer crashes on a circular reference.
 
-[Unreleased]: https://github.com/ricetim/readarr-rresurrected/compare/v11.0.0...HEAD
+[Unreleased]: https://github.com/ricetim/readarr-rresurrected/compare/v11.0.1...HEAD
+[11.0.1]: https://github.com/ricetim/readarr-rresurrected/releases/tag/v11.0.1
 [11.0.0]: https://github.com/ricetim/readarr-rresurrected/releases/tag/v11.0.0
 [10.0.0]: https://github.com/ricetim/readarr-rresurrected/releases/tag/v10.0.0

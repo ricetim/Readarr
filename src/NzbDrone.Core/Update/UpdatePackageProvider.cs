@@ -53,7 +53,17 @@ namespace NzbDrone.Core.Update
 
             var update = _httpClient.Get<UpdatePackageAvailable>(request.Build()).Resource;
 
-            if (!update.Available)
+            if (update?.UpdatePackage == null || !update.Available)
+            {
+                return null;
+            }
+
+            // Upstream's service compared against the version query param and answered
+            // Available accordingly. A static feed cannot, so it always reports the newest
+            // release and the comparison happens here. Without this the health check would
+            // warn that an update exists on every install once the build is 14 days old,
+            // and InstallUpdateService would reinstall the running version.
+            if (update.UpdatePackage.Version <= currentVersion)
             {
                 return null;
             }

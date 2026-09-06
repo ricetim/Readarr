@@ -20,8 +20,11 @@ namespace NzbDrone.Common.Instrumentation
             new (@"\b(\w*)?(_?(?<!use|get_)token|username|passwo?rd)=(?<secret>[^&=]+?)(?= |&|$|;)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
             new (@"-hd.me/torrent/[a-z0-9-]\.[0-9]+\.(?<secret>[0-9a-z]+)", RegexOptions.Compiled | RegexOptions.IgnoreCase),
 
-            // Trackers Announce Keys; Designed for Qbit Json; should work for all in theory
-            new (@"announce(\.php)?(/|%2f|%3fpasskey%3d)(?<secret>[a-z0-9]{16,})|(?<secret>[a-z0-9]{16,})(/|%2f)announce", RegexOptions.Compiled | RegexOptions.IgnoreCase),
+            // Trackers Announce Keys; Designed for Qbit Json; should work for all in theory.
+            // The character class must allow - and _: MyAnonamouse issues passkeys containing
+            // hyphens, and a class of [a-z0-9] silently failed to match them, writing the
+            // passkey to the log in clear text.
+            new (@"announce(\.php)?(/|%2f|%3fpasskey%3d)(?<secret>[a-z0-9_-]{16,})|(?<secret>[a-z0-9_-]{16,})(/|%2f)announce", RegexOptions.Compiled | RegexOptions.IgnoreCase),
 
             // Path
             new (@"C:\\Users\\(?<secret>[^\""]+?)(\\|$)", RegexOptions.Compiled | RegexOptions.IgnoreCase),

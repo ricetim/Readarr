@@ -10,7 +10,8 @@ namespace NzbDrone.Common.Test.EnvironmentInfo
         [Test]
         public void should_return_version()
         {
-            BuildInfo.Version.Major.Should().BeOneOf(0, 10);
+            // 0 when the assembly carries no version; otherwise this fork's major.
+            BuildInfo.Version.Major.Should().BeOneOf(0, 11);
         }
 
         [Test]

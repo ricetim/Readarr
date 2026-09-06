@@ -51,6 +51,15 @@ handling throughout, and adds two significant indexer capabilities.
 
 ### Fixed
 
+- **Security: tracker passkeys are no longer written to log files.** The log scrubber matched
+  only letters and digits, so a passkey containing a hyphen or underscore — as MyAnonamouse
+  issues — was recorded in clear text. **If you have run an earlier build, rotate your tracker
+  passkey**, as it may appear in existing logs.
+- **Security: log files and backups always require authentication.** With *Authentication
+  Required* set to *Disabled for Local Addresses*, a reverse proxy that does not forward the
+  client address makes every request look local, leaving `/logfile/` and `/backup/` readable
+  without credentials. Those paths no longer use that bypass. Check that your proxy sets
+  `X-Forwarded-For`, or set *Authentication Required* to *Enabled*.
 - **Author search and refresh recover automatically from upstream errors** rather than failing
   until the container is restarted.
 - **Authors with initials are found again.** MyAnonamouse stores initialed names with spaces

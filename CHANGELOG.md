@@ -23,6 +23,11 @@ All notable changes to the fork are recorded here.
 
 ### New
 
+- **Basic authentication has been removed.** It sent your credentials on every request and had
+  no way to log out; Forms authentication does the same job with a proper login page and a
+  session. Anyone using Basic is switched to Forms automatically on first start, keeping the
+  same username and password — no action needed.
+
 ### Fixed
 
 ## [11.0.0] - 2026-09-06

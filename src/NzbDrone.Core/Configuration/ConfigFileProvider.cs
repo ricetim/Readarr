@@ -68,6 +68,8 @@ namespace NzbDrone.Core.Configuration
     {
         public const string CONFIG_ELEMENT_NAME = "Config";
 
+        private const string LegacyBasicAuthenticationMethod = "Basic";
+
         private readonly IEventAggregator _eventAggregator;
         private readonly IDiskProvider _diskProvider;
         private readonly ICached<string> _cache;
@@ -200,13 +202,25 @@ namespace NzbDrone.Core.Configuration
 
                 if (enabled)
                 {
-                    SetValue("AuthenticationMethod", AuthenticationType.Basic);
-                    return AuthenticationType.Basic;
+                    SetValue("AuthenticationMethod", AuthenticationType.Forms);
+                    return AuthenticationType.Forms;
                 }
 
-                return Enum.TryParse<AuthenticationType>(_authOptions.Method, out var enumValue)
-                    ? enumValue
-                    : GetValueEnum("AuthenticationMethod", AuthenticationType.None);
+                var configured = _authOptions.Method.IsNotNullOrWhiteSpace()
+                    ? _authOptions.Method
+                    : GetValue("AuthenticationMethod", AuthenticationType.None);
+
+                // Basic was removed as an option. Existing installs still carry it in
+                // config.xml or the environment, and parsing is strict, so without this the
+                // application would fail to start rather than merely lose a setting. Forms
+                // uses the same stored username and password.
+                if (configured.Equals(LegacyBasicAuthenticationMethod, StringComparison.OrdinalIgnoreCase))
+                {
+                    SetValue("AuthenticationMethod", AuthenticationType.Forms);
+                    return AuthenticationType.Forms;
+                }
+
+                return Enum.Parse<AuthenticationType>(configured, true);
             }
         }
 

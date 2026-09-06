@@ -161,6 +161,34 @@ namespace NzbDrone.Common.Test
             result.Should().Be(AuthenticationType.None);
         }
 
+        // Basic was removed in 11.0. Parsing is strict, so an unmigrated value would stop the
+        // application starting rather than merely losing a setting.
+        [TestCase("Basic")]
+        [TestCase("basic")]
+        [TestCase("BASIC")]
+        public void should_migrate_legacy_basic_authentication_to_forms(string configured)
+        {
+            _configFileContents = $@"<Config><AuthenticationMethod>{configured}</AuthenticationMethod></Config>";
+
+            Subject.AuthenticationMethod.Should().Be(AuthenticationType.Forms);
+        }
+
+        [Test]
+        public void should_migrate_legacy_authentication_enabled_flag_to_forms()
+        {
+            _configFileContents = @"<Config><AuthenticationEnabled>True</AuthenticationEnabled></Config>";
+
+            Subject.AuthenticationMethod.Should().Be(AuthenticationType.Forms);
+        }
+
+        [Test]
+        public void should_leave_other_authentication_methods_alone()
+        {
+            _configFileContents = @"<Config><AuthenticationMethod>External</AuthenticationMethod></Config>";
+
+            Subject.AuthenticationMethod.Should().Be(AuthenticationType.External);
+        }
+
         [Test]
         public void SaveDictionary_should_save_proper_value()
         {

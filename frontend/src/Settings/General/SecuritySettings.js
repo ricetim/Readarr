@@ -27,12 +27,6 @@ export const authenticationMethodOptions = [
     isHidden: true
   },
   {
-    key: 'basic',
-    get value() {
-      return translate('AuthBasic');
-    }
-  },
-  {
     key: 'forms',
     get value() {
       return translate('AuthForm');

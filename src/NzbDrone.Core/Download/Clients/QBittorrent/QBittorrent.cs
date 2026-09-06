@@ -472,10 +472,17 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
             catch (DownloadClientAuthenticationException ex)
             {
                 _logger.Error(ex, "Unable to authenticate");
-                return new NzbDroneValidationFailure("Username", "Authentication failure")
-                {
-                    DetailedDescription = "Please verify your username and password."
-                };
+
+                // Point the error at whichever credential is actually in use.
+                return Settings.ApiKey.IsNotNullOrWhiteSpace()
+                    ? new NzbDroneValidationFailure("ApiKey", "Authentication failure")
+                    {
+                        DetailedDescription = "Please verify your API key."
+                    }
+                    : new NzbDroneValidationFailure("Username", "Authentication failure")
+                    {
+                        DetailedDescription = "Please verify your username and password."
+                    };
             }
             catch (WebException ex)
             {

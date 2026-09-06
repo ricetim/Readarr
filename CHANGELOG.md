@@ -23,7 +23,15 @@ All notable changes to the fork are recorded here.
 
 ### New
 
+- **qBittorrent API key support.** qBittorrent 5.1 and later can issue an API key; set it under
+  the download client's advanced settings to use it instead of a username and password.
+
 ### Fixed
+
+- **qBittorrent logins no longer fail against newer versions.** Recent qBittorrent releases answer
+  a successful login with an empty response, which was treated as a failure.
+- **qBittorrent behind a reverse proxy that does its own authentication** no longer has empty
+  credentials sent on every request.
 
 ## [11.0.1] - 2026-09-06
 

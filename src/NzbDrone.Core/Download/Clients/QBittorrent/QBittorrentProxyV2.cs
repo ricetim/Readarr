@@ -341,9 +341,21 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
         {
             var requestBuilder = new HttpRequestBuilder(settings.UseSsl, settings.Host, settings.Port, settings.UrlBase)
             {
-                LogResponseContent = true,
-                NetworkCredential = new BasicNetworkCredential(settings.Username, settings.Password)
+                LogResponseContent = true
             };
+
+            if (settings.ApiKey.IsNotNullOrWhiteSpace())
+            {
+                requestBuilder.Headers["Authorization"] = $"Bearer {settings.ApiKey}";
+            }
+            else if (settings.Username.IsNotNullOrWhiteSpace() || settings.Password.IsNotNullOrWhiteSpace())
+            {
+                // Only send Basic credentials when there are some. Sending an empty
+                // credential broke setups where qBittorrent sits behind a proxy that
+                // does its own authentication.
+                requestBuilder.NetworkCredential = new BasicNetworkCredential(settings.Username, settings.Password);
+            }
+
             return requestBuilder;
         }
 
@@ -357,6 +369,37 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
 
         private string ProcessRequest(HttpRequestBuilder requestBuilder, QBittorrentSettings settings)
         {
+            // An API key authenticates every request on its own, so there is no login
+            // to perform and no cookie to carry.
+            if (settings.ApiKey.IsNotNullOrWhiteSpace())
+            {
+                var apiKeyRequest = requestBuilder.Build();
+                apiKeyRequest.LogResponseContent = true;
+
+                try
+                {
+                    return _httpClient.Execute(apiKeyRequest).Content;
+                }
+                catch (HttpException ex)
+                {
+                    if (ex.Response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
+                    {
+                        _logger.Debug(ex, "qBittorrent authentication failed.");
+
+                        throw new DownloadClientAuthenticationException("Failed to authenticate with qBittorrent.", ex);
+                    }
+
+                    throw new DownloadClientException("Failed to connect to qBittorrent, check your settings.", ex);
+                }
+                catch (WebException ex)
+                {
+                    throw new DownloadClientException("Failed to connect to qBittorrent, please check your settings.", ex);
+                }
+            }
+
+            // Build after authenticating: AuthenticateClient puts the session cookie on the
+            // builder, so building first would send every request unauthenticated and force
+            // a fresh login each time.
             AuthenticateClient(requestBuilder, settings);
 
             var request = requestBuilder.Build();
@@ -424,8 +467,8 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
                 }
                 catch (HttpException ex)
                 {
-                    _logger.Debug("qbitTorrent authentication failed.");
-                    if (ex.Response.StatusCode == HttpStatusCode.Forbidden)
+                    _logger.Debug(ex, "qBittorrent authentication failed.");
+                    if (ex.Response.StatusCode is HttpStatusCode.Unauthorized or HttpStatusCode.Forbidden)
                     {
                         throw new DownloadClientAuthenticationException("Failed to authenticate with qBittorrent.", ex);
                     }
@@ -437,8 +480,9 @@ namespace NzbDrone.Core.Download.Clients.QBittorrent
                     throw new DownloadClientUnavailableException("Failed to connect to qBittorrent, please check your settings.", ex);
                 }
 
-                // returns "Fails." on bad login
-                if (response.Content != "Ok.")
+                // Returns "Fails." on bad login. Newer versions answer a successful login
+                // with an empty body, which must not be treated as a failure.
+                if (response.Content.IsNotNullOrWhiteSpace() && response.Content != "Ok.")
                 {
                     _logger.Debug("qbitTorrent authentication failed.");
                     throw new DownloadClientAuthenticationException("Failed to authenticate with qBittorrent.");

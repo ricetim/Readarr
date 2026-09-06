@@ -4,8 +4,12 @@
 
 **readarr-rresurrected** is a fully working fork of [Readarr](https://github.com/Readarr/Readarr) that brings the project back to life after its retirement in early 2025. It bundles a self-hosted metadata service directly inside the container, replacing the defunct cloud API with a solution that requires no external dependencies and no second container.
 
+[![Docker Pulls](https://img.shields.io/docker/pulls/ricetim/readarr-rresurrected?logo=docker&label=pulls)](https://hub.docker.com/r/ricetim/readarr-rresurrected)
+[![Image Size](https://img.shields.io/docker/image-size/ricetim/readarr-rresurrected/latest?logo=docker&label=image)](https://hub.docker.com/r/ricetim/readarr-rresurrected)
 [![License](https://img.shields.io/badge/license-GPLv3-green)](LICENSE.md)
 [![Issues](https://img.shields.io/github/issues/ricetim/readarr-rresurrected)](https://github.com/ricetim/readarr-rresurrected/issues)
+
+**Docker image:** [`ricetim/readarr-rresurrected` on Docker Hub](https://hub.docker.com/r/ricetim/readarr-rresurrected)
 
 ---
 
@@ -23,7 +27,18 @@ The community didn't give up. [@blampe](https://github.com/blampe) built [rreadi
 
 ---
 
-MyAnonamouse (MAM) is included as a built-in indexer option. Several bugs present in the upstream implementation have been fixed, making it fully functional out of the box.
+## Indexers
+
+Alongside the indexers Readarr already supported, this fork adds native support for two private
+trackers, so neither needs Prowlarr:
+
+- **MyAnonamouse** — several bugs in the upstream implementation are fixed, making it functional
+  out of the box. Releases carry language, and the interactive search dialog can expand any
+  result to show narrator, file count, series, category, tags and the full description.
+- **Bibliotik** — cookie-based authentication; paste your session cookie and it works.
+
+Quality profiles also gained an **Allowed Languages** setting, so automatic grabbing can be
+restricted to the languages you actually read.
 
 ---
 
@@ -67,6 +82,16 @@ docker run -d \
 
 ---
 
+## Image Tags
+
+| Tag | Description |
+|-----|-------------|
+| `latest` | Most recent build from `develop`. Moves with every push. |
+| `11.0.0` | A specific release. Pin this if you want to control when you upgrade. |
+| `11.0` | Latest patch within a minor release. |
+
+---
+
 ## Configuration
 
 ### Environment Variables
@@ -76,8 +101,11 @@ docker run -d \
 | `GOOGLE_BOOKS_API_KEY` | *(empty)* | Optional. Improves ebook edition discovery for books with incomplete Goodreads records. [Get a key](https://developers.google.com/books/docs/v1/using#APIKey). |
 | `READARR_API_KEY` | *(empty)* | Optional. Set to your Readarr API key to enable the bookinfo → Readarr refresh webhook (auto-refresh when background pagination completes). |
 | `READARR_URL` | *(empty)* | Optional. Set to `http://localhost:8787` when using the webhook above. |
-| `BOOKINFO_GR_RATE` | `3` | Seconds between Goodreads page requests. Increase if you see rate-limit errors. |
+| `BOOKINFO_GR_RATE` | `3` | Goodreads requests **per second**. Lower it if you see rate-limit errors. |
 | `BOOKINFO_BATCH_SIZE` | `20` | Works fetched per batch during background pagination. |
+| `BOOKINFO_LOG_DIR` | `/logs` | Where `bookinfo` writes its own log files. Set to a path under `/config` to keep them; if the directory cannot be created, file logging is skipped and output goes to the container log instead. |
+| `BOOKINFO_LOG_KEEP` | `10` | How many `bookinfo` log files to retain. |
+| `READARR_METADATA_URL` | `http://localhost:28202/{route}` | Advanced. Point Readarr at a different metadata service, such as a separate rreading-glasses instance. Must keep the `{route}` placeholder. |
 
 ### Volumes
 
@@ -150,6 +178,13 @@ This fork is database-compatible with `ghcr.io/faustvii/readarr` and `hotio/read
 - Large author catalogs (500+ books) may take several minutes to fully paginate due to Goodreads rate limits
 - Scheduled refreshes re-fetch all works; incremental refresh (only new/changed works) is not yet implemented
 - Google Books supplement requires a valid API key to fill in ebook editions missing from Goodreads
+
+---
+
+## Changelog
+
+Release notes live in [CHANGELOG.md](CHANGELOG.md). The same notes appear in the app under
+**System → Updates** and in the dialog shown after an update.
 
 ---
 

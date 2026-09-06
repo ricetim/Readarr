@@ -1,10 +1,10 @@
 using System;
+using System.Globalization;
 using System.Text;
 using Moq;
 using NUnit.Framework;
 using NzbDrone.Common.Cloud;
 using NzbDrone.Common.Http;
-using NzbDrone.Common.Serializer;
 using NzbDrone.Core.HealthCheck.Checks;
 using NzbDrone.Core.Localization;
 using NzbDrone.Core.Test.Framework;
@@ -19,19 +19,20 @@ namespace NzbDrone.Core.Test.HealthCheck.Checks
         public void Setup()
         {
             Mocker.SetConstant<IReadarrCloudRequestBuilder>(new ReadarrCloudRequestBuilder());
-        }
-
-        private void GivenServerTime(DateTime dateTime)
-        {
-            var json = new ServiceTimeResponse { DateTimeUtc = dateTime }.ToJson();
 
             Mocker.GetMock<ILocalizationService>()
                   .Setup(s => s.GetLocalizedString(It.IsAny<string>()))
                   .Returns("System time is off by more than 1 day. Scheduled tasks may not run correctly until the time is corrected");
+        }
+
+        private void GivenServerTime(DateTime dateTime)
+        {
+            var headers = new HttpHeader();
+            headers.Add("Date", dateTime.ToUniversalTime().ToString("R", CultureInfo.InvariantCulture));
 
             Mocker.GetMock<IHttpClient>()
                   .Setup(s => s.Execute(It.IsAny<HttpRequest>()))
-                  .Returns<HttpRequest>(r => new HttpResponse(r, new HttpHeader(), Encoding.ASCII.GetBytes(json)));
+                  .Returns<HttpRequest>(r => new HttpResponse(r, headers, Encoding.ASCII.GetBytes("{}")));
         }
 
         [Test]
@@ -49,6 +50,29 @@ namespace NzbDrone.Core.Test.HealthCheck.Checks
 
             Subject.Check().ShouldBeError();
             ExceptionVerification.ExpectedErrors(1);
+        }
+
+        [Test]
+        public void should_be_ok_when_no_date_header_is_returned()
+        {
+            Mocker.GetMock<IHttpClient>()
+                  .Setup(s => s.Execute(It.IsAny<HttpRequest>()))
+                  .Returns<HttpRequest>(r => new HttpResponse(r, new HttpHeader(), Encoding.ASCII.GetBytes("{}")));
+
+            Subject.Check().ShouldBeOk();
+        }
+
+        // Without the guard in Check(), one unreachable endpoint aborted the entire
+        // health check run rather than just this check.
+        [Test]
+        public void should_be_ok_when_there_is_no_internet_connection()
+        {
+            Mocker.GetMock<IHttpClient>()
+                  .Setup(s => s.Execute(It.IsAny<HttpRequest>()))
+                  .Throws(new System.Net.WebException("No such host is known"));
+
+            Subject.Check().ShouldBeOk();
+            ExceptionVerification.ExpectedWarns(1);
         }
     }
 }

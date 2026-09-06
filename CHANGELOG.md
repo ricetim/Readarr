@@ -32,6 +32,10 @@ All notable changes to the fork are recorded here.
   a successful login with an empty response, which was treated as a failure.
 - **qBittorrent behind a reverse proxy that does its own authentication** no longer has empty
   credentials sent on every request.
+- **One unreachable service no longer stops every health check from running.** The system time
+  check contacted an endpoint that retired with upstream Readarr; when it failed, the exception
+  aborted the whole run, so unrelated checks silently stopped reporting. It now fails on its own
+  and verifies the clock against the server date returned with the update feed.
 
 ## [11.0.1] - 2026-09-06
 

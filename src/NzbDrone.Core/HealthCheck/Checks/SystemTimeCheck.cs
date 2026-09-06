@@ -1,8 +1,8 @@
 using System;
 using NLog;
 using NzbDrone.Common.Cloud;
+using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Http;
-using NzbDrone.Common.Serializer;
 using NzbDrone.Core.Localization;
 
 namespace NzbDrone.Core.HealthCheck.Checks
@@ -23,27 +23,44 @@ namespace NzbDrone.Core.HealthCheck.Checks
 
         public override HealthCheck Check()
         {
-            var request = _cloudRequestBuilder.Create()
-                                              .Resource("/time")
-                                              .Build();
-
-            var response = _client.Execute(request);
-            var result = Json.Deserialize<ServiceTimeResponse>(response.Content);
-            var systemTime = DateTime.UtcNow;
-
-            // +/- more than 1 day
-            if (Math.Abs(result.DateTimeUtc.Subtract(systemTime).TotalDays) >= 1)
+            // The whole check is guarded: without this, no internet connection meant an
+            // unhandled exception here aborted every other health check in the run.
+            try
             {
-                _logger.Error("System time mismatch. SystemTime: {0} Expected Time: {1}. Update system time", systemTime, result.DateTimeUtc);
-                return new HealthCheck(GetType(), HealthCheckResult.Error, _localizationService.GetLocalizedString("SystemTimeCheckMessage"), "#system-time-off");
+                // Upstream read a JSON /time endpoint from the Readarr cloud service, which
+                // retired with the project. Static hosting cannot serve the current time, so
+                // the server's own Date response header is used instead - it is part of every
+                // HTTP response and accurate far beyond the one-day tolerance below.
+                var request = _cloudRequestBuilder.Create()
+                                                  .Resource("/update/{branch}.json")
+                                                  .SetSegment("branch", "develop")
+                                                  .Build();
+
+                var response = _client.Execute(request);
+                var serverTimeHeader = response.Headers.GetSingleValue("Date");
+
+                if (serverTimeHeader.IsNullOrWhiteSpace())
+                {
+                    _logger.Debug("No Date header returned, cannot verify system time");
+                    return new HealthCheck(GetType());
+                }
+
+                var serverTime = HttpHeader.ParseDateTime(serverTimeHeader);
+                var systemTime = DateTime.UtcNow;
+
+                // +/- more than 1 day
+                if (Math.Abs(serverTime.Subtract(systemTime).TotalDays) >= 1)
+                {
+                    _logger.Error("System time mismatch. SystemTime: {0} Expected Time: {1}. Update system time", systemTime, serverTime);
+                    return new HealthCheck(GetType(), HealthCheckResult.Error, _localizationService.GetLocalizedString("SystemTimeCheckMessage"), "#system-time-off");
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.Warn(ex, "Unable to verify system time");
             }
 
             return new HealthCheck(GetType());
         }
-    }
-
-    public class ServiceTimeResponse
-    {
-        public DateTime DateTimeUtc { get; set; }
     }
 }

@@ -25,6 +25,10 @@ All notable changes to the fork are recorded here.
 
 ### Fixed
 
+- **Fewer database lock errors on large libraries.** Bulk updates now run in a single
+  transaction instead of committing row by row, and SQLite waits longer for a busy lock before
+  giving up. Refreshes on big libraries are faster and less likely to fail part-way.
+
 ## [11.0.2] - 2026-09-06
 
 ### New

@@ -54,7 +54,7 @@ namespace NzbDrone.Core.Datastore
                 JournalMode = OsInfo.IsOsx ? SQLiteJournalModeEnum.Truncate : SQLiteJournalModeEnum.Wal,
                 Pooling = true,
                 Version = 3,
-                BusyTimeout = 100
+                BusyTimeout = 1000
             };
 
             if (OsInfo.IsOsx)

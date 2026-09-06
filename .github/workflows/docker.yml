@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - develop
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 jobs:
@@ -23,12 +25,47 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # A tagged build is a release and gets version tags. An untagged develop push keeps
+      # moving :latest, with the run number as the fourth version field so successive dev
+      # builds are distinguishable and always sort above the release they follow.
+      - name: Derive version and tags
+        id: meta
+        run: |
+          BASE=$(grep -m1 -oE '^## \[[0-9]+\.[0-9]+\.[0-9]+\]' CHANGELOG.md | tr -d '#[] ')
+          if [ -z "$BASE" ]; then echo "no version heading in CHANGELOG.md" >&2; exit 1; fi
+
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            ASSEMBLY="${VERSION}.0"
+            MINOR="${VERSION%.*}"
+            TAGS="ricetim/readarr-rresurrected:${VERSION}"
+            TAGS="${TAGS},ricetim/readarr-rresurrected:${MINOR}"
+            TAGS="${TAGS},ricetim/readarr-rresurrected:latest"
+            if [ "$VERSION" != "$BASE" ]; then
+              echo "tag ${GITHUB_REF_NAME} does not match CHANGELOG version ${BASE}" >&2
+              exit 1
+            fi
+          else
+            VERSION="${BASE}"
+            ASSEMBLY="${BASE}.${GITHUB_RUN_NUMBER}"
+            TAGS="ricetim/readarr-rresurrected:latest"
+          fi
+
+          echo "version=${VERSION}"   >> "$GITHUB_OUTPUT"
+          echo "assembly=${ASSEMBLY}" >> "$GITHUB_OUTPUT"
+          echo "tags=${TAGS}"         >> "$GITHUB_OUTPUT"
+          echo "Building ${ASSEMBLY} -> ${TAGS}"
+
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ricetim/readarr-rresurrected:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            VERSION=${{ steps.meta.outputs.version }}
+            ASSEMBLY_VERSION=${{ steps.meta.outputs.assembly }}
+            BRANCH=develop
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

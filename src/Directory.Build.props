@@ -73,8 +73,9 @@
     <Company>readarr.com</Company>
     <Copyright>Copyright 2017-$([System.DateTime]::Now.ToString('yyyy')) readarr.com (GNU General Public v3)</Copyright>
 
-    <!-- Should be replaced by CI -->
-    <AssemblyVersion>10.0.0.*</AssemblyVersion>
+    <!-- Local/dev builds get a generated build number so they are obviously not a release.
+         CI overrides this with the exact tagged version via -p:AssemblyVersion=x.y.z.0 -->
+    <AssemblyVersion>11.0.0.*</AssemblyVersion>
     <AssemblyConfiguration>$(Configuration)-dev</AssemblyConfiguration>
     <NeutralLanguage>en</NeutralLanguage>
 

@@ -1,0 +1,62 @@
+name: Publish Update Feed
+
+# The feed Readarr polls for release notes and update detection. Generated from
+# CHANGELOG.md, so editing that file and pushing is all a release needs.
+on:
+  push:
+    branches: [develop]
+    paths:
+      - 'CHANGELOG.md'
+      - '.github/scripts/changelog_to_feed.py'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two publishes race; the newest changelog should win.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate feed from CHANGELOG.md
+        run: |
+          python3 .github/scripts/changelog_to_feed.py \
+            --changelog CHANGELOG.md \
+            --out _site \
+            --branch develop \
+            --package-url "https://hub.docker.com/r/ricetim/readarr-rresurrected/tags"
+
+      - name: Add a landing page
+        run: |
+          cat > _site/index.html <<'HTML'
+          <!doctype html>
+          <meta charset="utf-8">
+          <title>readarr-rresurrected update feed</title>
+          <style>body{font:16px/1.6 system-ui,sans-serif;max-width:40rem;margin:3rem auto;padding:0 1rem}code{background:#f4f4f5;padding:.15em .4em;border-radius:4px}</style>
+          <h1>readarr-rresurrected</h1>
+          <p>This site serves the update feed the application polls for release notes.</p>
+          <ul>
+            <li><a href="v1/update/develop.json">v1/update/develop.json</a></li>
+            <li><a href="v1/update/develop/changes.json">v1/update/develop/changes.json</a></li>
+          </ul>
+          <p>Notes are authored in <a href="https://github.com/ricetim/readarr-rresurrected/blob/develop/CHANGELOG.md">CHANGELOG.md</a>.</p>
+          HTML
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

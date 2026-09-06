@@ -14,6 +14,10 @@ WORKDIR /src
 
 COPY src/ ./src/
 COPY Logo/ ./Logo/
+# Four-part version: BuildInfo reads Assembly.GetName().Version, which is always
+# four-part. The update feed must match exactly, or System.Version comparisons
+# treat "11.0.0" (revision -1) as different from "11.0.0.0".
+ARG ASSEMBLY_VERSION=11.0.0.0
 RUN dotnet msbuild src/Readarr.sln \
       -restore \
       -p:Configuration=Release \
@@ -21,6 +25,7 @@ RUN dotnet msbuild src/Readarr.sln \
       -p:RuntimeIdentifiers=linux-musl-x64 \
       -p:EnableAnalyzers=false \
       -p:TreatWarningsAsErrors=false \
+      -p:AssemblyVersion=${ASSEMBLY_VERSION} \
       -t:PublishAllRids
 
 # ── Stage 3: runtime (Alpine) ─────────────────────────────────────────────────
@@ -51,11 +56,11 @@ RUN apk add --no-cache \
 
 WORKDIR /app
 
-ARG VERSION=dev
+ARG VERSION=11.0.0
 ARG VENDOR=ricetim
 ARG PackageOwner=ricetim
 ARG PackageRepo=readarr
-ARG BRANCH=feature/mam-indexer
+ARG BRANCH=develop
 
 ENV COMPlus_EnableDiagnostics=0
 ENV READARR__UPDATE__BRANCH=${BRANCH}

@@ -12,8 +12,9 @@ namespace NzbDrone.Common.Cloud
     {
         public ReadarrCloudRequestBuilder()
         {
-            //TODO: Create Update Endpoint
-            Services = new HttpRequestBuilder("https://readarr.servarr.com/v1/")
+            // Upstream Readarr's service endpoint was retired with the project and now 404s.
+            // This fork publishes a static update feed generated from CHANGELOG.md.
+            Services = new HttpRequestBuilder("https://ricetim.github.io/readarr-rresurrected/v1/")
                 .CreateFactory();
 
             Metadata = new HttpRequestBuilder("https://api.bookinfo.club/v1/{route}")

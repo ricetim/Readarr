@@ -35,7 +35,7 @@ namespace NzbDrone.Core.Update
         public UpdatePackage GetLatestUpdate(string branch, Version currentVersion)
         {
             var request = _requestBuilder.Create()
-                                         .Resource("/update/{branch}")
+                                         .Resource("/update/{branch}.json")
                                          .AddQueryParam("version", currentVersion)
                                          .AddQueryParam("os", OsInfo.Os.ToString().ToLowerInvariant())
                                          .AddQueryParam("arch", RuntimeInformation.OSArchitecture)
@@ -64,7 +64,7 @@ namespace NzbDrone.Core.Update
         public List<UpdatePackage> GetRecentUpdates(string branch, Version currentVersion, Version previousVersion)
         {
             var request = _requestBuilder.Create()
-                                         .Resource("/update/{branch}/changes")
+                                         .Resource("/update/{branch}/changes.json")
                                          .AddQueryParam("version", currentVersion)
                                          .AddQueryParam("os", OsInfo.Os.ToString().ToLowerInvariant())
                                          .AddQueryParam("arch", RuntimeInformation.OSArchitecture)
